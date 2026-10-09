@@ -9,7 +9,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.seven.procgen.engine.Noise2D;
 import com.seven.procgen.engine.WhiteNoise;
 import com.seven.procgen.engine.logging.LogUtil;
-import org.apache.logging.log4j.Logger;
+import org.slf4j.Logger;
 
 /**
  * {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms.
@@ -21,8 +21,7 @@ public class Main extends ApplicationAdapter {
     @Override
     public void create() {
         Logger logger = LogUtil.GetLogger();
-        logger.error("test");
-        logger.debug("test {}", 2);
+        logger.info("test {}", 1);
         this.batch = new SpriteBatch();
         int size = 256;
         Noise2D noise = new WhiteNoise(1234);
