@@ -11,7 +11,9 @@ import com.seven.procgen.engine.WhiteNoise;
 import com.seven.procgen.engine.logging.LogUtil;
 import org.apache.logging.log4j.Logger;
 
-/** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
+/**
+ * {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms.
+ */
 public class Main extends ApplicationAdapter {
     private SpriteBatch batch;
     private Texture texture;
@@ -21,7 +23,7 @@ public class Main extends ApplicationAdapter {
         Logger logger = LogUtil.GetLogger();
         logger.error("test");
         logger.debug("test {}", 2);
-        batch = new SpriteBatch();
+        this.batch = new SpriteBatch();
         int size = 256;
         Noise2D noise = new WhiteNoise(1234);
 
@@ -32,22 +34,22 @@ public class Main extends ApplicationAdapter {
                 pixmap.drawPixel(x, y, Color.rgba8888(v, v, v, 1f));
             }
         }
-        texture = new Texture(pixmap);
-        texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
+        this.texture = new Texture(pixmap);
+        this.texture.setFilter(Texture.TextureFilter.Nearest, Texture.TextureFilter.Nearest);
         pixmap.dispose();
     }
 
     @Override
     public void render() {
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1f);
-        batch.begin();
-        batch.draw(texture, 20, 20, 512, 512);
-        batch.end();
+        this.batch.begin();
+        this.batch.draw(this.texture, 20, 20, 512, 512);
+        this.batch.end();
     }
 
     @Override
     public void dispose() {
-        batch.dispose();
-        texture.dispose();
+        this.batch.dispose();
+        this.texture.dispose();
     }
 }
