@@ -9,6 +9,7 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.seven.procgen.engine.Noise2D;
 import com.seven.procgen.engine.WhiteNoise;
 import com.seven.procgen.engine.logging.LogUtil;
+import com.seven.procgen.engine.registry.Identifier;
 import org.slf4j.Logger;
 
 /**
@@ -21,7 +22,8 @@ public class Main extends ApplicationAdapter {
     @Override
     public void create() {
         Logger logger = LogUtil.GetLogger();
-        logger.info("test {}", 1);
+        Identifier id = Identifier.of("some_identifier/with_path");
+        logger.info("test {}", id);
         this.batch = new SpriteBatch();
         int size = 256;
         Noise2D noise = new WhiteNoise(1234);
@@ -29,7 +31,7 @@ public class Main extends ApplicationAdapter {
         Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
-                float v = (float) noise.sample(x, y);
+                float v = (float)noise.sample(x, y);
                 pixmap.drawPixel(x, y, Color.rgba8888(v, v, v, 1f));
             }
         }
