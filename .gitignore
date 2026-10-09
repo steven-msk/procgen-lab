@@ -13,6 +13,7 @@ gradle-app.setting
 /headless/build/
 /server/build/
 /shared/build/
+/engine/build/
 
 ## Java:
 *.class
@@ -20,6 +21,10 @@ gradle-app.setting
 *.ear
 hs_err_pid*
 .attach_pid*
+
+## Logs:
+*.log
+logs/
 
 ## Android:
 /android/libs/armeabi-v7a/
@@ -70,6 +75,7 @@ www-test/
 /core/bin/
 /lwjgl2/bin/
 /lwjgl3/bin/
+/engine/bin/
 /html/bin/
 /teavm/bin/
 /ios/bin/
@@ -101,6 +107,7 @@ www-test/
 /headless/nbproject/private/
 /server/nbproject/private/
 /shared/nbproject/private/
+/engine/nbproject/private/
 
 /nbbuild/
 /android/nbbuild/
@@ -114,6 +121,7 @@ www-test/
 /headless/nbbuild/
 /server/nbbuild/
 /shared/nbbuild/
+/engine/nbbuild/
 
 /dist/
 /android/dist/
@@ -127,6 +135,7 @@ www-test/
 /headless/dist/
 /server/dist/
 /shared/dist/
+/engine/dist/
 
 /nbdist/
 /android/nbdist/
@@ -140,6 +149,7 @@ www-test/
 /headless/nbdist/
 /server/nbdist/
 /shared/nbdist/
+/engine/nbdist/
 
 nbactions.xml
 nb-configuration.xml

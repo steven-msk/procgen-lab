@@ -1,9 +1,16 @@
 package com.seven.procgen.engine;
 
+import com.seven.procgen.engine.logging.LogUtil;
+import org.apache.logging.log4j.Logger;
+
 public final class WhiteNoise implements Noise2D {
+    private static final Logger LOGGER = LogUtil.GetLogger();
     private final long seed;
 
-    public WhiteNoise(long seed) { this.seed = seed; }
+    public WhiteNoise(long seed) {
+        this.seed = seed;
+        LOGGER.info("test");
+    }
 
     @Override
     public double sample(double x, double y) {
