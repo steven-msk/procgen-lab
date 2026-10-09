@@ -8,7 +8,7 @@ This project was generated with a template including simple application launcher
 
 - `core`: Main module with the application logic shared by all platforms.
 - `lwjgl3`: Primary desktop platform using LWJGL3; was called 'desktop' in older docs.
-- 'engine': Core procedural generation code shared by all platforms.
+- `'engine'`: Core procedural generation code shared by all platforms.
 
 ## Gradle
 
