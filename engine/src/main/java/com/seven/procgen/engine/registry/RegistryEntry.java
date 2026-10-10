@@ -1,10 +1,12 @@
 package com.seven.procgen.engine.registry;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Objects;
 import java.util.function.Predicate;
 
 public final class RegistryEntry<T> {
-    private final RegistryEntryOwner<T> owner;
+    private final @Nullable RegistryEntryOwner<T> owner;
     private final RegistryKey<T> registryKey;
     private final T value;
 
@@ -15,10 +17,13 @@ public final class RegistryEntry<T> {
     }
 
     public static <T> RegistryEntry<T> of(RegistryEntryOwner<T> owner, RegistryKey<T> key, T value) {
-        Objects.requireNonNull(owner, "owner");
         Objects.requireNonNull(value, "value");
         Objects.requireNonNull(key, "key");
         return new RegistryEntry<>(owner, key, value);
+    }
+
+    public static <T> RegistryEntry<T> of(RegistryKey<T> key, T value) {
+        return of(null, key, value);
     }
 
     public boolean matches(Predicate<RegistryKey<T>> predicate) {
@@ -41,8 +46,8 @@ public final class RegistryEntry<T> {
         return this.value;
     }
 
-    public boolean ownerEquals(RegistryEntryOwner<T> other) {
-        return this.owner.ownerEquals(other);
+    public boolean ownerEquals(@Nullable RegistryEntryOwner<T> other) {
+        return this.owner == null ? other == null : this.owner.ownerEquals(other);
     }
 
     @Override
