@@ -1,5 +1,7 @@
 package com.seven.procgen.engine.registry;
 
+import java.util.Objects;
+
 public final class RegistryKey<T> {
     private final Identifier registry;
     private final Identifier value;
@@ -31,6 +33,18 @@ public final class RegistryKey<T> {
 
     @Override
     public String toString() {
-        return this.registry.toString() + "/" + this.value.toString();
+        return "Key[" + this.registry.toString() + " : " + this.value.toString() + "]";
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        return obj instanceof RegistryKey<?> other
+                && other.registry.equals(this.registry)
+                && other.value.equals(this.value);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.registry, this.value);
     }
 }
