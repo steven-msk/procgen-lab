@@ -4,6 +4,7 @@ import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.function.NoiseSampler;
 import com.seven.procgen.engine.random.RandomFork;
 import com.seven.procgen.engine.random.RandomSource;
+import com.seven.procgen.engine.util.math.NoiseMath;
 import org.jspecify.annotations.Nullable;
 
 public final class FBMCombiner implements NoiseSampler {
@@ -14,7 +15,10 @@ public final class FBMCombiner implements NoiseSampler {
     private final double lowestFreqValueFactor;
     private final double lowestFreqInputFactor;
 
-    public FBMCombiner(RandomSource random, NoiseFunction noiseFunction, String salt, int firstOctave, double[] octaveMultipliers, double lacunarity, double persistence) {
+    public FBMCombiner(
+            RandomSource random, NoiseFunction noiseFunction, String salt,
+            int firstOctave, double[] octaveMultipliers, double lacunarity, double persistence
+    ) {
         this.octaveMultipliers = octaveMultipliers;
         this.lacunarity = lacunarity;
         this.persistence = persistence;
@@ -42,7 +46,7 @@ public final class FBMCombiner implements NoiseSampler {
         for (int i = 0; i < samplerLevels.length; i++) {
             NoiseSampler sampler = samplerLevels[i];
             if (sampler != null) {
-                double noise = sampler.getNoise(wrap(x * factor), wrap(y * factor));
+                double noise = sampler.getNoise(NoiseMath.wrap(x * factor), NoiseMath.wrap(y * factor));
                 value += octaveMultipliers[i] * noise * valueFactor;
             }
             factor *= lacunarity;
@@ -50,9 +54,5 @@ public final class FBMCombiner implements NoiseSampler {
         }
 
         return value;
-    }
-
-    private static double wrap(double value) {
-        return value - (long)Math.floor(value / 3.3554432E7d + 0.5) * 3.3554432E7d;
     }
 }
