@@ -7,7 +7,6 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.seven.procgen.engine.noise.function.NoiseFunctions;
-import com.seven.procgen.engine.noise.function.NoiseParameter;
 import com.seven.procgen.engine.noise.function.NoiseSampler;
 import com.seven.procgen.engine.registry.Registry;
 
@@ -23,10 +22,8 @@ public class Main extends ApplicationAdapter {
         Registry.bootstrap();
         this.batch = new SpriteBatch();
         int size = 256;
-        NoiseSampler noise = NoiseFunctions.WHITE.createSampler(NoiseSampler.Parameters.builder()
-                .add(NoiseParameter.SEED, 0L)
-                .build()
-        );
+        long seed = 0L;
+        NoiseSampler noise = NoiseFunctions.WHITE.createSampler(seed);
 
         Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
         for (int y = 0; y < size; y++) {

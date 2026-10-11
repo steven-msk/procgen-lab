@@ -54,22 +54,22 @@ public interface NoiseSampler {
         public static class Builder {
             private final ImmutableMap.Builder<RegistryKey<NoiseParameter<?>>, RegistryEntry<NoiseParameter<?>>> entries = ImmutableMap.builder();
 
-            public <T> Builder add(RegistryKey<NoiseParameter<T>> key, T value) {
-                return this.add(key, new NoiseParameter<>(value));
+            public <T> Builder with(RegistryKey<NoiseParameter<T>> key, T value) {
+                return this.with(key, new NoiseParameter<>(value));
             }
 
-            public <T> Builder add(RegistryKey<NoiseParameter<T>> key, NoiseParameter<T> value) {
-                return this.add(key, RegistryEntry.of(key, value));
+            public <T> Builder with(RegistryKey<NoiseParameter<T>> key, NoiseParameter<T> value) {
+                return this.with(key, RegistryEntry.of(key, value));
             }
 
             @SuppressWarnings("unchecked")
-            private <T> Builder add(RegistryKey<NoiseParameter<T>> key, RegistryEntry<NoiseParameter<T>> entry) {
+            private <T> Builder with(RegistryKey<NoiseParameter<T>> key, RegistryEntry<NoiseParameter<T>> entry) {
                 this.entries.put((RegistryKey<NoiseParameter<?>>)(RegistryKey<?>)key, (RegistryEntry<NoiseParameter<?>>)(RegistryEntry<?>)entry);
                 return this;
             }
 
             public Parameters build() {
-                return new Parameters(this.entries.build());
+                return new Parameters(this.entries.buildKeepingLast());
             }
         }
     }
