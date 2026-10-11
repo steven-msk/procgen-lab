@@ -1,12 +1,13 @@
 package com.seven.procgen.engine.noise.combiner;
 
-import com.seven.procgen.engine.noise.function.NoiseFunction;
-import com.seven.procgen.engine.noise.function.NoiseSampler;
+import com.seven.procgen.engine.noise.sampler.NoiseSampler;
+import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.random.RandomFork;
 import com.seven.procgen.engine.random.RandomSource;
+import com.seven.procgen.engine.util.math.NoiseMath;
 import org.jspecify.annotations.Nullable;
 
-public final class FBMCombiner implements NoiseFunction {
+public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
     public static final double DEFAULT_LACUNARITY = 2.0d;
     public static final double DEFAULT_PERSISTENCE = 0.5d;
     private final @Nullable NoiseSampler[] samplerLevels;
@@ -16,30 +17,25 @@ public final class FBMCombiner implements NoiseFunction {
     private final double lowestFreqValueFactor;
     private final double lowestFreqInputFactor;
 
-    public FBMCombiner(RandomSource random, NoiseFunction function, Parameters parameters) {
-        this(random, function, "", parameters);
+    public FBMCombiner(RandomSource random, NoiseSamplerProvider samplerProvider, Parameters parameters) {
+        this(random, samplerProvider, "", parameters);
     }
 
-    public FBMCombiner(RandomSource random, NoiseFunction function, String salt, Parameters parameters) {
-        this(random, function, salt, parameters.firstOctave, parameters.octaveMultipliers, parameters.lacunarity, parameters.persistence);
-    }
-
-    public FBMCombiner(
-            RandomSource random, NoiseFunction noiseFunction, String salt,
-            int firstOctave, double[] octaveMultipliers, double lacunarity, double persistence
-    ) {
-        this.octaveMultipliers = octaveMultipliers;
-        this.lacunarity = lacunarity;
-        this.persistence = persistence;
+    public FBMCombiner(RandomSource random, NoiseSamplerProvider samplerProvider, String salt, Parameters parameters) {
+        super(random, samplerProvider, parameters);
+        this.octaveMultipliers = parameters.octaveMultipliers;
+        this.lacunarity = parameters.lacunarity;
+        this.persistence = parameters.persistence;
         int octaves = octaveMultipliers.length;
+        int firstOctave = parameters.firstOctave;
 
         samplerLevels = new NoiseSampler[octaves];
         RandomFork fork = random.fork();
         for (int i = 0; i < octaves; i++) {
             if (octaveMultipliers[i] != 0.0d) {
                 long seed = fork.fromHashOf(salt + "_octave_" + i).nextLong();
-//                NoiseSampler sampler = noiseFunction.createSampler(seed);
-//                samplerLevels[i] = sampler;
+                NoiseSampler sampler = samplerProvider.getSampler(seed);
+                samplerLevels[i] = sampler;
             }
         }
         lowestFreqInputFactor = Math.pow(2.0d, firstOctave);
@@ -47,37 +43,25 @@ public final class FBMCombiner implements NoiseFunction {
     }
 
     @Override
-    public double compute(Context context) {
-        return 0;
+    public double compute(double x, double y) {
+        double value = 0.0d;
+        double factor = lowestFreqInputFactor;
+        double valueFactor = lowestFreqValueFactor;
+
+        for (int i = 0; i < samplerLevels.length; i++) {
+            NoiseSampler sampler = samplerLevels[i];
+            if (sampler != null) {
+                double noise = sampler.sample(NoiseMath.wrap(x * factor), NoiseMath.wrap(y * factor));
+                value += octaveMultipliers[i] * noise * valueFactor;
+            }
+            factor *= lacunarity;
+            valueFactor *= persistence;
+        }
+
+        return value;
     }
 
-    @Override
-    public NoiseFunction mapAll(Visitor visitor) {
-        return null;
-    }
-
-//    @Override
-//    public NoiseSampler compile(Compiler compiler) {
-//        return (x, y) -> {
-//            double value = 0.0d;
-//            double factor = lowestFreqInputFactor;
-//            double valueFactor = lowestFreqValueFactor;
-//
-//            for (int i = 0; i < samplerLevels.length; i++) {
-//                NoiseSampler sampler = samplerLevels[i];
-//                if (sampler != null) {
-//                    double noise = sampler.sample(NoiseMath.wrap(x * factor), NoiseMath.wrap(y * factor));
-//                    value += octaveMultipliers[i] * noise * valueFactor;
-//                }
-//                factor *= lacunarity;
-//                valueFactor *= persistence;
-//            }
-//
-//            return value;
-//        };
-//    }
-
-    public record Parameters(int firstOctave, double[] octaveMultipliers, double lacunarity, double persistence) {
+    public record Parameters(int firstOctave, double[] octaveMultipliers, double lacunarity, double persistence) implements NoiseCombiner.Parameters {
         public static Parameters of(int firstOctave, double... octaveMultipliers) {
             return new Parameters(firstOctave, octaveMultipliers, DEFAULT_LACUNARITY, DEFAULT_PERSISTENCE);
         }

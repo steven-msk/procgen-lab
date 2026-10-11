@@ -6,13 +6,15 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
+import com.seven.procgen.engine.noise.combiner.NoiseCombinerProvider;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.function.NoiseFunctions;
-import com.seven.procgen.engine.noise.function.NoiseSampler;
-import com.seven.procgen.engine.noise.function.WhiteNoise;
+import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
+import com.seven.procgen.engine.noise.sampler.WhiteNoise;
+import com.seven.procgen.engine.random.JavaRandomSource;
+import com.seven.procgen.engine.random.RandomSource;
 import com.seven.procgen.engine.registry.Registry;
-
-import java.util.function.Function;
 
 /**
  * {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms.
@@ -27,7 +29,13 @@ public class Main extends ApplicationAdapter {
         this.batch = new SpriteBatch();
         int size = 256;
         long seed = 0L;
+        RandomSource random = new JavaRandomSource(seed);
+//        NoiseFunction noise = NoiseFunctions.createCombiner(FBMCombiner::new, WhiteNoise::new, FBMCombiner.Parameters.of(-1, 1.5d, 1.0d, 0.0d, 0.0d, 0.0d, 1.0d));
+//        NoiseFunction noise = NoiseFunctions.createCombiner(RidgedMultifractalCombiner::new, PerlinNoise::new, RidgedMultifractalCombiner.Parameters.of(
+//                6, 0.01d, 2.0d, 0.5d, 2.0d, 1.0d
+//        ));
         NoiseFunction noise = NoiseFunctions.createSampler(WhiteNoise::new);
+
         noise = noise.mapAll(new NoiseFunction.Visitor() {
             @Override
             public NoiseFunction apply(NoiseFunction input) {
@@ -36,8 +44,16 @@ public class Main extends ApplicationAdapter {
 
             @Override
             public NoiseFunction.SamplerEntry visitSampler(NoiseFunction.SamplerEntry sampler) {
-                Function<Long, NoiseSampler> factory = sampler.samplerFactory();
-                return new NoiseFunction.SamplerEntry(factory, factory.apply(seed));
+                NoiseSamplerProvider provider = sampler.provider();
+                return new NoiseFunction.SamplerEntry(provider, provider.getSampler(seed));
+            }
+
+            @Override
+            public <T extends NoiseCombiner.Parameters> NoiseFunction.CombinerEntry<T> visitCombiner(NoiseFunction.CombinerEntry<T> combiner) {
+                NoiseCombinerProvider<T> combinerProvider = combiner.provider();
+                NoiseSamplerProvider samplerProvider = combiner.samplerProvider();
+                T parameters = combiner.parameters();
+                return new NoiseFunction.CombinerEntry<>(combinerProvider, samplerProvider, parameters, combinerProvider.getCombiner(random, samplerProvider, parameters));
             }
         });
 

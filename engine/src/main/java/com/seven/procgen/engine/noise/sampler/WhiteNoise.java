@@ -1,4 +1,4 @@
-package com.seven.procgen.engine.noise.function;
+package com.seven.procgen.engine.noise.sampler;
 
 public class WhiteNoise implements NoiseSampler {
     private final long seed;

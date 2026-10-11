@@ -1,4 +1,4 @@
-package com.seven.procgen.engine.noise.function;
+package com.seven.procgen.engine.noise.sampler;
 
 public interface NoiseSampler {
     /// Returns a value in [-1, 1]. Must be deterministic and thread-safe

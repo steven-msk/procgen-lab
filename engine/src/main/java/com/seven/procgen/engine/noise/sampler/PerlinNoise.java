@@ -1,4 +1,4 @@
-package com.seven.procgen.engine.noise.function;
+package com.seven.procgen.engine.noise.sampler;
 
 public final class PerlinNoise implements NoiseSampler {
     private static final double INV_SQRT2 = 0.7071067811865476d;
