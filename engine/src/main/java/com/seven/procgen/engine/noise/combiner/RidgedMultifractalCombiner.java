@@ -4,9 +4,8 @@ import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.function.NoiseSampler;
 import com.seven.procgen.engine.random.RandomFork;
 import com.seven.procgen.engine.random.RandomSource;
-import com.seven.procgen.engine.util.math.NoiseMath;
 
-public final class RidgedMultifractalCombiner implements NoiseSampler {
+public final class RidgedMultifractalCombiner implements NoiseFunction {
     private final NoiseSampler[] samplers;
     private final double[] amplitudes;
     private final double frequency;
@@ -33,7 +32,7 @@ public final class RidgedMultifractalCombiner implements NoiseSampler {
         double amplitudeSum = 0.0d;
         for (int i = 0; i < octaves; i++) {
             long seed = fork.fromHashOf(salt + "_octave_" + i).nextLong();
-            samplers[i] = noiseFunction.createSampler(seed);
+//            samplers[i] = noiseFunction.createSampler(seed);
             amplitudes[i] = amplitude;
             amplitudeSum += amplitude;
             amplitude *= persistence;
@@ -44,26 +43,38 @@ public final class RidgedMultifractalCombiner implements NoiseSampler {
         normalization = 1.0d / (amplitudeSum * maxSignal);
     }
 
+//    @Override
+//    public NoiseSampler createSampler(long seed) {
+//        return (x, y) -> {
+//            double result = 0.0d;
+//            double weight = 1.0d;
+//            double f = frequency;
+//
+//            for (int i = 0; i < samplers.length; i++) {
+//                double n = samplers[i].sample(NoiseMath.wrap(x * f), NoiseMath.wrap(y * f));
+//
+//                double signal = offset - Math.abs(n); // fold: creates the ridge at n == 0
+//                signal *= signal;                     // sharpens the ridge
+//                signal *= weight;                     // damp by the previous octave
+//
+//                result += signal * amplitudes[i];
+//
+//                // high areas of this octave get more detail from the next one
+//                weight = Math.clamp(signal * gain, 0.0d, 1.0d);
+//                f *= lacunarity;
+//            }
+//
+//            return result * normalization;
+//        };
+//    }
+
     @Override
-    public double getNoise(double x, double y) {
-        double result = 0.0d;
-        double weight = 1.0d;
-        double f = frequency;
+    public double compute(Context context) {
+        return 0;
+    }
 
-        for (int i = 0; i < samplers.length; i++) {
-            double n = samplers[i].getNoise(NoiseMath.wrap(x * f), NoiseMath.wrap(y * f));
-
-            double signal = offset - Math.abs(n); // fold: creates the ridge at n == 0
-            signal *= signal;                     // sharpens the ridge
-            signal *= weight;                     // damp by the previous octave
-
-            result += signal * amplitudes[i];
-
-            // high areas of this octave get more detail from the next one
-            weight = Math.clamp(signal * gain, 0.0d, 1.0d);
-            f *= lacunarity;
-        }
-
-        return result * normalization;
+    @Override
+    public NoiseFunction mapAll(Visitor visitor) {
+        return null;
     }
 }

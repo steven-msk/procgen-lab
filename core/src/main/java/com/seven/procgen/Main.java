@@ -6,9 +6,13 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.function.NoiseFunctions;
 import com.seven.procgen.engine.noise.function.NoiseSampler;
+import com.seven.procgen.engine.noise.function.WhiteNoise;
 import com.seven.procgen.engine.registry.Registry;
+
+import java.util.function.Function;
 
 /**
  * {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms.
@@ -23,12 +27,24 @@ public class Main extends ApplicationAdapter {
         this.batch = new SpriteBatch();
         int size = 256;
         long seed = 0L;
-        NoiseSampler noise = NoiseFunctions.WHITE.createSampler(seed);
+        NoiseFunction noise = NoiseFunctions.createSampler(WhiteNoise::new);
+        noise = noise.mapAll(new NoiseFunction.Visitor() {
+            @Override
+            public NoiseFunction apply(NoiseFunction input) {
+                return input;
+            }
+
+            @Override
+            public NoiseFunction.SamplerEntry visitSampler(NoiseFunction.SamplerEntry sampler) {
+                Function<Long, NoiseSampler> factory = sampler.samplerFactory();
+                return new NoiseFunction.SamplerEntry(factory, factory.apply(seed));
+            }
+        });
 
         Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
         for (int y = 0; y < size; y++) {
             for (int x = 0; x < size; x++) {
-                float v = (float)noise.getNoise(x, y);
+                float v = Math.abs((float)noise.compute(new NoiseFunction.SinglePointContext(x, y)));
                 pixmap.drawPixel(x, y, Color.rgba8888(v, v, v, 1f));
             }
         }

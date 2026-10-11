@@ -1,16 +1,26 @@
 package com.seven.procgen.engine.noise.function;
 
-import com.seven.procgen.engine.registry.Registry;
-import com.seven.procgen.engine.registry.RegistryEntryLookup;
+import java.util.function.Function;
 
 public final class NoiseFunctions {
-    public static final NoiseFunction WHITE = register("white", new WhiteNoise());
 
-    private static NoiseFunction register(String id, NoiseFunction function) {
-        return Registry.register(Registry.NOISE_FUNCTION, id, function);
+    public static NoiseFunction createSampler(Function<Long, NoiseSampler> factory) {
+        return createSampler(factory, 1.0d, 1.0d);
     }
 
-    public static NoiseFunction init(Registry<NoiseFunction> registry, RegistryEntryLookup.RegistryLookup lookup) {
-        return WHITE;
+    public static NoiseFunction createSampler(Function<Long, NoiseSampler> factory, double xScale, double yScale) {
+        return new Sampler(new NoiseFunction.SamplerEntry(factory, null), xScale, yScale);
+    }
+
+    public record Sampler(NoiseFunction.SamplerEntry samplerEntry, double xScale, double yScale) implements NoiseFunction {
+        @Override
+        public double compute(Context context) {
+            return samplerEntry.get(context.x() * xScale, context.y() * yScale);
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Sampler(visitor.visitSampler(this.samplerEntry), this.xScale, this.yScale));
+        }
     }
 }

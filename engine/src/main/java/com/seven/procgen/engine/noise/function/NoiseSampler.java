@@ -2,5 +2,5 @@ package com.seven.procgen.engine.noise.function;
 
 public interface NoiseSampler {
     /// Returns a value in [-1, 1]. Must be deterministic and thread-safe
-    double getNoise(double x, double y);
+    double sample(double x, double y);
 }
