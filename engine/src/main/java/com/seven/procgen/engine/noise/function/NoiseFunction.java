@@ -14,6 +14,26 @@ public interface NoiseFunction {
 
     NoiseFunction mapAll(Visitor visitor);
 
+    default NoiseFunction abs() {
+        return NoiseFunctions.abs(this);
+    }
+
+    default NoiseFunction add(NoiseFunction other) {
+        return NoiseFunctions.add(this, other);
+    }
+
+    default NoiseFunction mul(NoiseFunction other) {
+        return NoiseFunctions.mult(this, other);
+    }
+
+    default NoiseFunction mul(double v) {
+        return NoiseFunctions.mult(this, NoiseFunctions.constant(v));
+    }
+
+    default NoiseFunction clamp(double min, double max) {
+        return NoiseFunctions.clamp(this, min, max);
+    }
+
     interface Visitor {
         NoiseFunction apply(NoiseFunction input);
 

@@ -10,9 +10,10 @@ import com.seven.procgen.engine.noise.NoiseState;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerType;
 import com.seven.procgen.engine.noise.combiner.RidgedMultifractalCombiner;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
-import com.seven.procgen.engine.noise.function.NoiseFunctions;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.registry.Registry;
+
+import static com.seven.procgen.engine.noise.function.NoiseFunctions.*;
 
 /**
  * {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms.
@@ -25,15 +26,28 @@ public class Main extends ApplicationAdapter {
     public void create() {
         Registry.bootstrap();
         this.batch = new SpriteBatch();
-        int size = 256;
+        int size = 512;
         long seed = 0L;
-//        NoiseFunction noise = NoiseFunctions.createCombiner(FBMCombiner::new, WhiteNoise::new, FBMCombiner.Parameters.of(-1, 1.5d, 1.0d, 0.0d, 0.0d, 0.0d, 1.0d));
-        NoiseFunction noise = NoiseFunctions.createCombiner("ridge", NoiseCombinerType.RIDGE_MULTIFRACTAL, NoiseSamplerType.PERLIN, RidgedMultifractalCombiner.Parameters.of(
-                6, 0.01d, 2.0d, 0.5d, 2.0d, 1.0d
-        ));
+
+//        NoiseFunction noise = NoiseFunctions.createCombiner("ridge", NoiseCombinerType.RIDGE_MULTIFRACTAL, NoiseSamplerType.PERLIN, RidgedMultifractalCombiner.Parameters.of(
+//                6, 0.01d, 2.0d, 0.5d, 2.0d, 1.0d
+//        ));
 //        NoiseFunction noise = NoiseFunctions.createSampler(WhiteNoise::new);
-        NoiseState noiseState = new NoiseState(seed);
-        noise = noise.mapAll(noiseState);
+//        noise = noise.mapAll(new NoiseState(seed));
+
+        NoiseFunction mountains = createCombiner("mountains", NoiseCombinerType.RIDGE_MULTIFRACTAL, NoiseSamplerType.PERLIN,
+                RidgedMultifractalCombiner.Parameters.of(6, 0.01d, 2.0d, 0.5d, 2.0d, 1.0d)
+        );
+        NoiseFunction detail = createSampler("detail", NoiseSamplerType.PERLIN, 0.1d, 0.1d);
+        NoiseFunction plains = createSampler("plains", NoiseSamplerType.PERLIN, 0.02d, 0.02d);
+
+        NoiseFunction a = mountains.add(detail.mul(0.2d));
+
+        NoiseFunction mask = createSampler("mask", NoiseSamplerType.PERLIN, 0.005d, 0.005d);
+        NoiseFunction b = lerp(remap01(plains), a, remap01(mask));
+
+        NoiseState state = new NoiseState(seed);
+        NoiseFunction noise = b.mapAll(state);
 
         Pixmap pixmap = new Pixmap(size, size, Pixmap.Format.RGBA8888);
         for (int y = 0; y < size; y++) {
