@@ -5,6 +5,8 @@ import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.seven.procgen.engine.logging.LogUtil;
+import com.seven.procgen.engine.noise.combiner.NoiseCombinerType;
+import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.util.collection.IndexedIterable;
 import it.unimi.dsi.fastutil.objects.*;
 import org.jspecify.annotations.Nullable;
@@ -19,6 +21,8 @@ public final class Registry<T> implements IndexedIterable<T>, RegistryEntryLooku
     private static final LinkedHashMap<Identifier, Supplier<?>> LOADERS = Maps.newLinkedHashMap();
     public static final Identifier ROOT_IDENTIFIER = Identifier.of("root");
     public static final Registry<Registry<?>> REGISTRIES = new Registry<>(RegistryKey.ofRegistry(ROOT_IDENTIFIER));
+    public static final Registry<NoiseSamplerType> NOISE_SAMPLER_TYPE = create(Registries.NOISE_SAMPLER_TYPE, NoiseSamplerType::init);
+    public static final Registry<NoiseCombinerType<?>> NOISE_COMBINER_TYPE = create(Registries.NOISE_COMBINER_TYPE, NoiseCombinerType::init);
     private static RegistryEntryLookup.RegistryLookup bootstrapLookup;
     private static final Set<Identifier> LOADED_REGISTRIES = Sets.newHashSet();
     private boolean frozen;
