@@ -22,6 +22,9 @@ gradle-app.setting
 hs_err_pid*
 .attach_pid*
 
+# Dear ImGui
+imgui.ini
+
 ## Logs:
 *.log
 logs/
