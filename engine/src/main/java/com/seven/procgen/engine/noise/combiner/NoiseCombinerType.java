@@ -7,7 +7,7 @@ import com.seven.procgen.engine.registry.RegistryEntryLookup;
 
 public final class NoiseCombinerType<T extends NoiseCombiner.Parameters> implements NoiseCombinerProvider<T> {
     public static final NoiseCombinerType<FBMCombiner.Parameters> FBM = register("fbm", FBMCombiner::new);
-    public static final NoiseCombinerType<RidgedMultifractalCombiner.Parameters> RIDGE_MULTIFRACTAL = register("ridge_multifractal", RidgedMultifractalCombiner::new);
+    public static final NoiseCombinerType<RidgedMultifractalCombiner.Parameters> RIDGED_MULTIFRACTAL = register("ridged_multifractal", RidgedMultifractalCombiner::new);
     private final NoiseCombinerProvider<T> provider;
 
     private static <T extends NoiseCombiner.Parameters> NoiseCombinerType<T> register(String id, NoiseCombinerProvider<T> provider) {

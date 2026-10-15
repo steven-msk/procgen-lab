@@ -1,5 +1,8 @@
 package com.seven.procgen.engine.noise.sampler;
 
+/**
+ * Basic white noise. Returns in [-1, 1]
+ */
 public class WhiteNoise implements NoiseSampler {
     private final long seed;
 

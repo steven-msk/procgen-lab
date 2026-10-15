@@ -35,7 +35,7 @@ public class Main extends ApplicationAdapter {
 //        NoiseFunction noise = NoiseFunctions.createSampler(WhiteNoise::new);
 //        noise = noise.mapAll(new NoiseState(seed));
 
-        NoiseFunction mountains = createCombiner("mountains", NoiseCombinerType.RIDGE_MULTIFRACTAL, NoiseSamplerType.PERLIN,
+        NoiseFunction mountains = createCombiner("mountains", NoiseCombinerType.RIDGED_MULTIFRACTAL, NoiseSamplerType.PERLIN,
                 RidgedMultifractalCombiner.Parameters.of(6, 0.01d, 2.0d, 0.5d, 2.0d, 1.0d)
         );
         NoiseFunction detail = createSampler("detail", NoiseSamplerType.PERLIN, 0.1d, 0.1d);
