@@ -15,6 +15,7 @@ import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.registry.Registry;
 import com.seven.procgen.engine.util.color.ColorRamp;
 import com.seven.procgen.render.PixmapPreviewRenderer;
+import imgui.ImGui;
 import org.slf4j.Logger;
 
 import static com.seven.procgen.engine.noise.function.NoiseFunctions.*;
@@ -26,6 +27,7 @@ public class ProcgenLab extends ApplicationAdapter {
     private static final Logger LOGGER = LogUtil.GetLogger();
     private static ProcgenLab instance;
     private final ApplicationConfig config;
+    private final ImGuiContextHandle imGuiContextHandle;
     private PixmapPreviewRenderer preview;
     private NoiseField field;
     private ColorRamp ramp = ColorRamp.TERRAIN;
@@ -37,6 +39,7 @@ public class ProcgenLab extends ApplicationAdapter {
         instance = this;
         this.config = config;
         Registry.bootstrap();
+        imGuiContextHandle = new ImGuiContextHandle();
     }
 
     private NoiseFunction tree() {
@@ -56,6 +59,8 @@ public class ProcgenLab extends ApplicationAdapter {
 
     @Override
     public void create() {
+        imGuiContextHandle.init();
+
         this.batch = new SpriteBatch();
         int size = 512;
         long seed = 0L;
@@ -71,9 +76,9 @@ public class ProcgenLab extends ApplicationAdapter {
         else preview.update(field, ramp, -1.0d, 1.0d, highlight);
     }
 
-    /// Keys 1, 2, and 3 switch the ramp, R toggles auto-range, and H toggles the out-of-range highlight
     @Override
     public void render() {
+        // Keys 1, 2, and 3 switch the ramp, R toggles auto-range, and H toggles the out-of-range highlight
         boolean changed = false;
         if (Gdx.input.isKeyJustPressed(Input.Keys.NUM_1)) {
             ramp = ColorRamp.GRAYSCALE;
@@ -106,10 +111,15 @@ public class ProcgenLab extends ApplicationAdapter {
         batch.begin();
         batch.draw(preview.texture(), 20, 20, 512, 512);
         batch.end();
+
+        imGuiContextHandle.start();
+        ImGui.button("Button");
+        imGuiContextHandle.end();
     }
 
     @Override
     public void dispose() {
+        imGuiContextHandle.dispose();
         this.batch.dispose();
     }
 
