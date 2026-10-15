@@ -22,14 +22,22 @@ import static com.seven.procgen.engine.noise.function.NoiseFunctions.*;
 /**
  * {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms.
  */
-public class Main extends ApplicationAdapter {
+public class ProcgenLab extends ApplicationAdapter {
     private static final Logger LOGGER = LogUtil.GetLogger();
+    private static ProcgenLab instance;
+    private final ApplicationConfig config;
     private PixmapPreviewRenderer preview;
     private NoiseField field;
     private ColorRamp ramp = ColorRamp.TERRAIN;
     private boolean autoRange = false;
     private boolean highlight = true;
     private SpriteBatch batch;
+
+    public ProcgenLab(ApplicationConfig config) {
+        instance = this;
+        this.config = config;
+        Registry.bootstrap();
+    }
 
     private NoiseFunction tree() {
         NoiseFunction mountains = createCombiner("mountains", NoiseCombinerType.RIDGED_MULTIFRACTAL, NoiseSamplerType.PERLIN,
@@ -48,7 +56,6 @@ public class Main extends ApplicationAdapter {
 
     @Override
     public void create() {
-        Registry.bootstrap();
         this.batch = new SpriteBatch();
         int size = 512;
         long seed = 0L;
@@ -104,5 +111,13 @@ public class Main extends ApplicationAdapter {
     @Override
     public void dispose() {
         this.batch.dispose();
+    }
+
+    public static ProcgenLab getInstance() {
+        return instance;
+    }
+
+    public ApplicationConfig getConfig() {
+        return config;
     }
 }
