@@ -5,8 +5,12 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.mojang.serialization.JsonOps;
 import com.seven.procgen.engine.logging.LogUtil;
 import com.seven.procgen.engine.noise.NoiseField;
+import com.seven.procgen.engine.noise.NoiseGraph;
 import com.seven.procgen.engine.noise.NoiseState;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerType;
 import com.seven.procgen.engine.noise.combiner.RidgedMultifractalCombiner;
@@ -44,7 +48,7 @@ public class ProcgenLab extends ApplicationAdapter {
 
     private NoiseFunction tree() {
         NoiseFunction mountains = createCombiner("mountains", NoiseCombinerType.RIDGED_MULTIFRACTAL, NoiseSamplerType.PERLIN,
-                RidgedMultifractalCombiner.Parameters.of(6, 0.01d, 2.0d, 0.5d, 2.0d, 1.0d)
+            RidgedMultifractalCombiner.Parameters.of(6, 0.01d, 2.0d, 0.5d, 2.0d, 1.0d)
         );
         NoiseFunction detail = createSampler("detail", NoiseSamplerType.PERLIN, 0.1d, 0.1d, 1.0d);
         NoiseFunction plains = createSampler("plains", NoiseSamplerType.PERLIN, 0.02d, 0.02d, 1.0d);
@@ -52,7 +56,7 @@ public class ProcgenLab extends ApplicationAdapter {
         NoiseFunction a = mountains.add(detail.mul(0.2d));
 
         NoiseFunction mask = createSampler("mask", NoiseSamplerType.PERLIN, 0.005d, 0.005d, 1.0d);
-        NoiseFunction b = lerp(remap01(plains), a, remap01(mask));
+        NoiseFunction b = lerp(remap01(plains), a.add(mountains), remap01(mask));
         return b;
     }
 
@@ -72,6 +76,8 @@ public class ProcgenLab extends ApplicationAdapter {
                 return input;
             }
         });
+        JsonElement json = NoiseGraph.TREE_CODEC.encodeStart(JsonOps.INSTANCE, noise).result().orElseThrow();
+        LOGGER.info(new GsonBuilder().setPrettyPrinting().create().toJson(json));
         this.field = NoiseField.sample(noise, size, size, 0.0d, 0.0d, 1.0d);
         this.preview = new PixmapPreviewRenderer();
         refresh();

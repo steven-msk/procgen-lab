@@ -1,8 +1,10 @@
 package com.seven.procgen.engine.noise.combiner;
 
-import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
-import com.seven.procgen.engine.random.RandomSource;
+import com.mojang.serialization.Codec;
+import com.seven.procgen.engine.registry.Registry;
 
-public interface NoiseCombinerProvider<T extends NoiseCombiner.Parameters> {
-    NoiseCombiner<T> getCombiner(RandomSource random, NoiseSamplerProvider samplerProvider, T parameters);
+public interface NoiseCombinerProvider<T extends NoiseCombiner.Parameters> extends NoiseCombinerGetter<T> {
+    Codec<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> CODEC = Registry.NOISE_COMBINER_PROVIDER.byNameCodec();
+
+    Codec<T> parametersCodec();
 }

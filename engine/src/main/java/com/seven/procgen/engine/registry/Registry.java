@@ -4,15 +4,25 @@ import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+import com.mojang.serialization.MapCodec;
 import com.seven.procgen.engine.logging.LogUtil;
+import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
+import com.seven.procgen.engine.noise.combiner.NoiseCombinerProvider;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerType;
+import com.seven.procgen.engine.noise.function.NoiseFunction;
+import com.seven.procgen.engine.noise.function.NoiseFunctionTypes;
+import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.util.collection.IndexedIterable;
 import it.unimi.dsi.fastutil.objects.*;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -21,8 +31,9 @@ public final class Registry<T> implements IndexedIterable<T>, RegistryEntryLooku
     private static final LinkedHashMap<Identifier, Supplier<?>> LOADERS = Maps.newLinkedHashMap();
     public static final Identifier ROOT_IDENTIFIER = Identifier.of("root");
     public static final Registry<Registry<?>> REGISTRIES = new Registry<>(RegistryKey.ofRegistry(ROOT_IDENTIFIER));
-    public static final Registry<NoiseSamplerType> NOISE_SAMPLER_TYPE = create(Registries.NOISE_SAMPLER_TYPE, NoiseSamplerType::init);
-    public static final Registry<NoiseCombinerType<?>> NOISE_COMBINER_TYPE = create(Registries.NOISE_COMBINER_TYPE, NoiseCombinerType::init);
+    public static final Registry<NoiseSamplerProvider> NOISE_SAMPLER_PROVIDER = create(Registries.NOISE_SAMPLER_PROVIDER, NoiseSamplerType::init);
+    public static final Registry<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> NOISE_COMBINER_PROVIDER = create(Registries.NOISE_COMBINER_PROVIDER, NoiseCombinerType::init);
+    public static final Registry<MapCodec<? extends NoiseFunction>> NOISE_FUNCTION = create(Registries.NOISE_FUNCTION, NoiseFunctionTypes::init);
     private static RegistryEntryLookup.RegistryLookup bootstrapLookup;
     private static final Set<Identifier> LOADED_REGISTRIES = Sets.newHashSet();
     private boolean frozen;
@@ -33,6 +44,14 @@ public final class Registry<T> implements IndexedIterable<T>, RegistryEntryLooku
     private final ObjectList<RegistryEntry<T>> rawIdToEntry = new ObjectArrayList<>();
     private final Reference2ObjectMap<T, RegistryEntry<T>> valueToEntry = new Reference2ObjectOpenHashMap<>();
     private int nextRawId;
+
+    private static <T> Registry<T> create(RegistryKey<? extends Registry<T>> key, Supplier<Object> initializer) {
+        return create(key, (registry, lookup) -> initializer.get());
+    }
+
+    private static <T> Registry<T> create(RegistryKey<? extends Registry<T>> key, Function<Registry<T>, Object> initializer) {
+        return create(key, (registry, lookup) -> initializer.apply(registry));
+    }
 
     private static <T> Registry<T> create(RegistryKey<? extends Registry<T>> key, Registry.Initializer<T> initializer) {
         Objects.requireNonNull(key, "key");
@@ -153,8 +172,8 @@ public final class Registry<T> implements IndexedIterable<T>, RegistryEntryLooku
 
     public Set<Map.Entry<RegistryKey<T>, T>> getEntrySet() {
         return this.rawIdToEntry.stream()
-                .map(e -> Map.entry(e.key(), e.value()))
-                .collect(Collectors.toCollection(LinkedHashSet::new));
+            .map(e -> Map.entry(e.key(), e.value()))
+            .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     public @Nullable Identifier getId(T value) {
@@ -209,8 +228,21 @@ public final class Registry<T> implements IndexedIterable<T>, RegistryEntryLooku
         return Optional.of(this.rawIdToEntry.get(rawId));
     }
 
+    public Codec<T> byNameCodec() {
+        return Identifier.CODEC.flatXmap(
+            id -> {
+                T v = get(id);
+                return v == null ? DataResult.error(() -> "Unknown id: " + id) : DataResult.success(v);
+            },
+            v -> {
+                Identifier id = getId(v);
+                return id == null ? DataResult.error(() -> "Value not registered") : DataResult.success(id);
+            }
+        );
+    }
+
     @Override
-    public Iterator<T> iterator() {
+    public @NonNull Iterator<T> iterator() {
         return this.rawIdToEntry.stream().map(RegistryEntry::value).iterator();
     }
 

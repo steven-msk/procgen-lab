@@ -36,17 +36,21 @@ public final class TestNoise {
         });
     }
 
-    public static double at(NoiseFunction f, double x, double y) {
-        return f.compute(new NoiseFunction.SinglePointContext(x, y));
+    public static double at(NoiseFunction f, double x, double y, double z) {
+        return f.compute(new NoiseFunction.SinglePointContext(x, y, z));
     }
 
     public static double[] sampleGrid(NoiseFunction f) {
-        double[] out = new double[GRID * GRID];
+        double[] out = new double[GRID * GRID * GRID];
+
         for (int i = 0; i < GRID; i++) {
             for (int j = 0; j < GRID; j++) {
-                out[j * GRID + i] = at(f, i * 3.71d + 0.31d, j * 2.93d + 0.17d);
+                for (int k = 0; k < GRID; k++) {
+                    out[(k * GRID + j) * GRID + i] = at(f, i * 3.71d + 0.31d, j * 2.93d + 0.17d, k * 3.17d + 0.23d);
+                }
             }
         }
+
         return out;
     }
 
@@ -64,7 +68,7 @@ public final class TestNoise {
         double min = Double.POSITIVE_INFINITY;
         double max = Double.NEGATIVE_INFINITY;
         for (int i = 0; i < count; i++) {
-            double v = at(f, (points.nextDouble() * 2 - 1) * 2000, (points.nextDouble() * 2 - 1) * 2000);
+            double v = at(f, (points.nextDouble() * 2 - 1) * 2000, (points.nextDouble() * 2 - 1) * 2000, (points.nextDouble() * 2 - 1) * 2000);
             min = Math.min(min, v);
             max = Math.max(max, v);
         }

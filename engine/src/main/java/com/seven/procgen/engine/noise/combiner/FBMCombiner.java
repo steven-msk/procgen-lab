@@ -1,10 +1,13 @@
 package com.seven.procgen.engine.noise.combiner;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.seven.procgen.engine.noise.sampler.NoiseSampler;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.random.RandomFork;
 import com.seven.procgen.engine.random.RandomSource;
 import com.seven.procgen.engine.util.math.NoiseMath;
+import com.seven.procgen.engine.util.serialization.Codecs;
 import org.jspecify.annotations.Nullable;
 
 public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
@@ -62,6 +65,13 @@ public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
     }
 
     public record Parameters(int firstOctave, double[] octaveMultipliers, double lacunarity, double persistence) implements NoiseCombiner.Parameters {
+        public static final Codec<Parameters> CODEC = RecordCodecBuilder.create(i -> i.group(
+            Codec.INT.fieldOf("first_octave").forGetter(Parameters::firstOctave),
+            Codecs.DOUBLE_ARRAY.fieldOf("octave_multipliers").forGetter(Parameters::octaveMultipliers),
+            Codec.DOUBLE.fieldOf("lacunarity").forGetter(Parameters::lacunarity),
+            Codec.DOUBLE.fieldOf("persistence").forGetter(Parameters::persistence)
+        ).apply(i, Parameters::new));
+
         public static Parameters of(int firstOctave, double... octaveMultipliers) {
             return new Parameters(firstOctave, octaveMultipliers, DEFAULT_LACUNARITY, DEFAULT_PERSISTENCE);
         }
