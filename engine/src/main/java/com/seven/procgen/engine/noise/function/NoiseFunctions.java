@@ -121,7 +121,7 @@ public final class NoiseFunctions {
 
         @Override
         public @NonNull String toString() {
-            return "Sampler[\"" + samplerEntry + "\", xScale=" + xScale + ", yscale=" + yScale + "]";
+            return "Sampler[\"" + samplerEntry + "\", xScale=" + xScale + ", yScale=" + yScale + ", zScale=" + zScale + "]";
         }
     }
 
@@ -159,7 +159,7 @@ public final class NoiseFunctions {
 
         @Override
         public @NonNull String toString() {
-            return "Combiner[\"" + combinerEntry + "\", xScale=" + xScale + ", yScale=" + yScale + "]";
+            return "Combiner[\"" + combinerEntry + "\", xScale=" + xScale + ", yScale=" + yScale + ", zScale=" + zScale + "]";
         }
     }
 
