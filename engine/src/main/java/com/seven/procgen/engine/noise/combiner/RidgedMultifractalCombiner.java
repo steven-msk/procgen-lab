@@ -1,5 +1,7 @@
 package com.seven.procgen.engine.noise.combiner;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.seven.procgen.engine.noise.sampler.NoiseSampler;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.random.RandomFork;
@@ -69,6 +71,15 @@ public final class RidgedMultifractalCombiner extends NoiseCombiner<RidgedMultif
     }
 
     public record Parameters(int octaves, double frequency, double lacunarity, double persistence, double gain, double offset) implements NoiseCombiner.Parameters {
+        public static final Codec<Parameters> CODEC = RecordCodecBuilder.create(i -> i.group(
+            Codec.INT.fieldOf("octaves").forGetter(Parameters::octaves),
+            Codec.DOUBLE.fieldOf("frequency").forGetter(Parameters::frequency),
+            Codec.DOUBLE.fieldOf("lacunarity").forGetter(Parameters::lacunarity),
+            Codec.DOUBLE.fieldOf("persistence").forGetter(Parameters::persistence),
+            Codec.DOUBLE.fieldOf("gain").forGetter(Parameters::gain),
+            Codec.DOUBLE.fieldOf("offset").forGetter(Parameters::offset)
+        ).apply(i, Parameters::new));
+
         public static Parameters of(int octaves, double frequency, double lacunarity, double persistence, double gain, double offset) {
             return new Parameters(octaves, frequency, lacunarity, persistence, gain, offset);
         }

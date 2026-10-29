@@ -1,5 +1,8 @@
 package com.seven.procgen.engine.noise.function;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerProvider;
 import com.seven.procgen.engine.noise.sampler.NoiseSampler;
@@ -7,11 +10,19 @@ import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.random.RandomFork;
 import com.seven.procgen.engine.random.RandomSource;
 import com.seven.procgen.engine.registry.Identifier;
+import com.seven.procgen.engine.registry.Registry;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.util.function.BiFunction;
+import java.util.function.Function;
+
 public interface NoiseFunction {
+    Codec<NoiseFunction> CODEC = Registry.NOISE_FUNCTION.byNameCodec().dispatch(NoiseFunction::codec, Function.identity());
+
     double compute(Context context);
+
+    MapCodec<? extends NoiseFunction> codec();
 
     NoiseFunction mapAll(Visitor visitor);
 
@@ -33,6 +44,22 @@ public interface NoiseFunction {
 
     default NoiseFunction clamp(double min, double max) {
         return NoiseFunctions.clamp(this, min, max);
+    }
+
+    static <T extends NoiseFunction> MapCodec<T> unaryCodec(Function<NoiseFunction, T> ctor, Function<T, NoiseFunction> in) {
+        return RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(in)
+        ).apply(i, ctor));
+    }
+
+    static <T extends NoiseFunction> MapCodec<T> binaryCodec(
+        BiFunction<NoiseFunction, NoiseFunction, T> ctor,
+        Function<T, NoiseFunction> a, Function<T, NoiseFunction> b
+    ) {
+        return RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("a").forGetter(a),
+            NoiseFunction.CODEC.fieldOf("b").forGetter(b)
+        ).apply(i, ctor));
     }
 
     interface Visitor {
@@ -59,6 +86,10 @@ public interface NoiseFunction {
     }
 
     record SamplerEntry(Identifier id, NoiseSamplerProvider provider, @Nullable NoiseSampler sampler) {
+        public static SamplerEntry of(Identifier id, NoiseSamplerProvider provider) {
+            return new SamplerEntry(id, provider, null);
+        }
+
         public double get(double x, double y, double z) {
             if (sampler == null) throw new IllegalStateException("Compute called with null sampler");
             return sampler.sample(x, y, z);
@@ -70,8 +101,7 @@ public interface NoiseFunction {
         }
 
         @Override
-        @NonNull
-        public String toString() {
+        public @NonNull String toString() {
             return id.toString();
         }
     }

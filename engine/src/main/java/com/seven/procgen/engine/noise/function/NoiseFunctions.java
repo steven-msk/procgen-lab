@@ -1,9 +1,14 @@
 package com.seven.procgen.engine.noise.function;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.MapCodec;
+import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerProvider;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.registry.Identifier;
+import com.seven.procgen.engine.util.serialization.Codecs;
+import org.jspecify.annotations.NonNull;
 
 import java.util.function.DoubleBinaryOperator;
 import java.util.function.DoubleUnaryOperator;
@@ -19,13 +24,13 @@ public final class NoiseFunctions {
     }
 
     public static <T extends NoiseCombiner.Parameters> NoiseFunction createCombiner(
-            String id, NoiseCombinerProvider<T> provider, NoiseSamplerProvider samplerProvider, T parameters
+        String id, NoiseCombinerProvider<T> provider, NoiseSamplerProvider samplerProvider, T parameters
     ) {
         return createCombiner(id, provider, samplerProvider, parameters, 1.0d, 1.0d, 1.0d);
     }
 
     public static <T extends NoiseCombiner.Parameters> NoiseFunction createCombiner(
-            String id, NoiseCombinerProvider<T> provider, NoiseSamplerProvider samplerProvider, T parameters, double xScale, double yScale, double zScale
+        String id, NoiseCombinerProvider<T> provider, NoiseSamplerProvider samplerProvider, T parameters, double xScale, double yScale, double zScale
     ) {
         return new Combiner<>(new NoiseFunction.CombinerEntry<>(Identifier.of(id), provider, samplerProvider, parameters, null), xScale, yScale, zScale);
     }
@@ -91,6 +96,14 @@ public final class NoiseFunctions {
     }
 
     public record Sampler(NoiseFunction.SamplerEntry samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
+        public static final MapCodec<Sampler> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Identifier.CODEC.fieldOf("id").forGetter(n -> n.samplerEntry().id()),
+            NoiseSamplerProvider.CODEC.fieldOf("sampler").forGetter(n -> n.samplerEntry().provider()),
+            Codec.DOUBLE.fieldOf("scale_x").forGetter(Sampler::xScale),
+            Codec.DOUBLE.fieldOf("scale_y").forGetter(Sampler::yScale),
+            Codec.DOUBLE.fieldOf("scale_z").forGetter(Sampler::zScale)
+        ).apply(i, (id, provider, sx, sy, sz) -> new Sampler(new SamplerEntry(id, provider, null), sx, sy, sz)));
+
         @Override
         public double compute(Context context) {
             return samplerEntry.get(context.x() * xScale, context.y() * yScale, context.z() * zScale);
@@ -102,12 +115,33 @@ public final class NoiseFunctions {
         }
 
         @Override
-        public String toString() {
-            return "Sampler[" + samplerEntry + ", xScale=" + xScale + ", yscale=" + yScale + "]";
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public @NonNull String toString() {
+            return "Sampler[\"" + samplerEntry + "\", xScale=" + xScale + ", yscale=" + yScale + "]";
         }
     }
 
     public record Combiner<T extends NoiseCombiner.Parameters>(NoiseFunction.CombinerEntry<T> combinerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
+        public static final MapCodec<Combiner<? extends NoiseCombiner.Parameters>> CODEC =
+            RecordCodecBuilder.mapCodec(i -> i.group(
+                NoiseCombinerProvider.CODEC.<CombinerEntry<?>>dispatchMap("type", CombinerEntry::provider, Combiner::entryCodec).fieldOf("combiner").forGetter(Combiner::combinerEntry),
+                Codec.DOUBLE.fieldOf("scale_x").forGetter(Combiner::xScale),
+                Codec.DOUBLE.fieldOf("scale_y").forGetter(Combiner::yScale),
+                Codec.DOUBLE.fieldOf("scale_z").forGetter(Combiner::zScale)
+            ).apply(i, Combiner::new));
+
+        private static <T extends NoiseCombiner.Parameters> MapCodec<CombinerEntry<T>> entryCodec(NoiseCombinerProvider<T> provider) {
+            return RecordCodecBuilder.mapCodec(i -> i.group(
+                Identifier.CODEC.fieldOf("id").forGetter(CombinerEntry::id),
+                NoiseSamplerProvider.CODEC.fieldOf("sampler").forGetter(CombinerEntry::samplerProvider),
+                provider.parametersCodec().fieldOf("parameters").forGetter(CombinerEntry::parameters)
+            ).apply(i, (id, sampler, params) -> new CombinerEntry<>(id, provider, sampler, params, null)));
+        }
+
         @Override
         public double compute(Context context) {
             return combinerEntry.combine(context.x() * xScale, context.y() * yScale, context.z() * zScale);
@@ -119,12 +153,21 @@ public final class NoiseFunctions {
         }
 
         @Override
-        public String toString() {
-            return "Combiner[" + combinerEntry + ", xScale=" + xScale + ", yScale=" + yScale + "]";
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public @NonNull String toString() {
+            return "Combiner[\"" + combinerEntry + "\", xScale=" + xScale + ", yScale=" + yScale + "]";
         }
     }
 
     public record Constant(double value) implements NoiseFunction {
+        public static final MapCodec<Constant> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Codec.DOUBLE.fieldOf("value").forGetter(Constant::value)
+        ).apply(i, Constant::new));
+
         @Override
         public double compute(Context context) {
             return value;
@@ -135,13 +178,24 @@ public final class NoiseFunctions {
             return visitor.apply(this);
         }
 
+
         @Override
-        public String toString() {
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public @NonNull String toString() {
             return "Constant[" + value + "]";
         }
     }
 
     public record UnaryFunction(UnaryOperation operation, NoiseFunction input) implements NoiseFunction {
+        public static final MapCodec<UnaryFunction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            UnaryOperation.CODEC.fieldOf("operation").forGetter(UnaryFunction::operation),
+            NoiseFunction.CODEC.fieldOf("input").forGetter(UnaryFunction::input)
+        ).apply(i, UnaryFunction::new));
+
         @Override
         public double compute(Context context) {
             return operation.apply(input.compute(context));
@@ -153,12 +207,23 @@ public final class NoiseFunctions {
         }
 
         @Override
-        public String toString() {
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public @NonNull String toString() {
             return operation + "[" + input + "]";
         }
     }
 
     public record BinaryFunction(BinaryOperation operation, NoiseFunction a, NoiseFunction b) implements NoiseFunction {
+        public static final MapCodec<BinaryFunction> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            BinaryOperation.CODEC.fieldOf("operation").forGetter(BinaryFunction::operation),
+            NoiseFunction.CODEC.fieldOf("a").forGetter(BinaryFunction::a),
+            NoiseFunction.CODEC.fieldOf("b").forGetter(BinaryFunction::b)
+        ).apply(i, BinaryFunction::new));
+
         @Override
         public double compute(Context context) {
             return operation.apply(a.compute(context), b.compute(context));
@@ -170,12 +235,23 @@ public final class NoiseFunctions {
         }
 
         @Override
-        public String toString() {
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public @NonNull String toString() {
             return operation + "[" + a + ", " + b + "]";
         }
     }
 
     public record Clamp(NoiseFunction input, double min, double max) implements NoiseFunction {
+        public static final MapCodec<Clamp> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(Clamp::input),
+            Codec.DOUBLE.fieldOf("min").forGetter(Clamp::min),
+            Codec.DOUBLE.fieldOf("max").forGetter(Clamp::max)
+        ).apply(i, Clamp::new));
+
         public Clamp {
             if (min > max) throw new IllegalArgumentException("min > max: " + min + " > " + max);
         }
@@ -191,32 +267,54 @@ public final class NoiseFunctions {
         }
 
         @Override
-        public String toString() {
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public @NonNull String toString() {
             return "Clamp[" + min + ".." + max + ": " + input + "]";
         }
     }
 
     /// Not clamped, t is expected in [0, 1]
-    public record Lerp(NoiseFunction a, NoiseFunction b, NoiseFunction t) implements NoiseFunction {
+    public record Lerp(NoiseFunction from, NoiseFunction to, NoiseFunction t) implements NoiseFunction {
+        public static final MapCodec<Lerp> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("from").forGetter(Lerp::from),
+            NoiseFunction.CODEC.fieldOf("to").forGetter(Lerp::to),
+            NoiseFunction.CODEC.fieldOf("t").forGetter(Lerp::t)
+        ).apply(i, Lerp::new));
+
         @Override
         public double compute(Context context) {
-            double av = a.compute(context);
-            return av + (b.compute(context) - av) * t.compute(context);
+            double av = from.compute(context);
+            return av + (to.compute(context) - av) * t.compute(context);
         }
 
         @Override
         public NoiseFunction mapAll(Visitor visitor) {
-            return visitor.apply(new Lerp(a.mapAll(visitor), b.mapAll(visitor), t.mapAll(visitor)));
+            return visitor.apply(new Lerp(from.mapAll(visitor), to.mapAll(visitor), t.mapAll(visitor)));
         }
 
         @Override
-        public String toString() {
-            return "Lerp[" + a + " -> " + b + " : " + t + "]";
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public @NonNull String toString() {
+            return "Lerp[" + from + " -> " + to + " : " + t + "]";
         }
     }
 
     /// input * scale + bias. Handy for remapping ranges, e.g. [-1, 1] -> [0, 1] is scale 0.5, bias 0.5.
     public record Affine(NoiseFunction input, double scale, double bias) implements NoiseFunction {
+        public static final MapCodec<Affine> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(Affine::input),
+            Codec.DOUBLE.fieldOf("scale").forGetter(Affine::scale),
+            Codec.DOUBLE.fieldOf("bias").forGetter(Affine::bias)
+        ).apply(i, Affine::new));
+
         @Override
         public double compute(Context context) {
             return input.compute(context) * scale + bias;
@@ -228,7 +326,12 @@ public final class NoiseFunctions {
         }
 
         @Override
-        public String toString() {
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public @NonNull String toString() {
             return "Affine[" + input + " * " + scale + " + " + bias + "]";
         }
     }
@@ -239,6 +342,8 @@ public final class NoiseFunctions {
         SQUARE(v -> v * v),
         CUBE(v -> v * v * v),
         ONE_MINUS(v -> 1.0d - v);
+
+        public static final Codec<UnaryOperation> CODEC = Codecs.enumOf(UnaryOperation.class);
 
         private final DoubleUnaryOperator operator;
 
@@ -257,6 +362,8 @@ public final class NoiseFunctions {
         MULTIPLY((a, b) -> a * b),
         MIN(Math::min),
         MAX(Math::max);
+
+        public static final Codec<BinaryOperation> CODEC = Codecs.enumOf(BinaryOperation.class);
 
         private final DoubleBinaryOperator operator;
 

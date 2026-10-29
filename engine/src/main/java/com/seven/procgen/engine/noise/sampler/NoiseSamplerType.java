@@ -1,7 +1,6 @@
 package com.seven.procgen.engine.noise.sampler;
 
 import com.seven.procgen.engine.registry.Registry;
-import com.seven.procgen.engine.registry.RegistryEntryLookup;
 
 public final class NoiseSamplerType implements NoiseSamplerProvider {
     public static final NoiseSamplerType WHITE = register("white", WhiteNoise::new);
@@ -9,10 +8,10 @@ public final class NoiseSamplerType implements NoiseSamplerProvider {
     private final NoiseSamplerProvider provider;
 
     private static NoiseSamplerType register(String id, NoiseSamplerProvider provider) {
-        return Registry.register(Registry.NOISE_SAMPLER_TYPE, id, new NoiseSamplerType(provider));
+        return Registry.register(Registry.NOISE_SAMPLER_PROVIDER, id, new NoiseSamplerType(provider));
     }
 
-    public static NoiseSamplerType init(Registry<NoiseSamplerType> registry, RegistryEntryLookup.RegistryLookup lookup) {
+    public static NoiseSamplerProvider init() {
         return WHITE;
     }
 

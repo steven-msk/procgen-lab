@@ -1,8 +1,20 @@
 package com.seven.procgen.engine.registry;
 
+import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
+
 import java.util.Objects;
 
 public final class Identifier {
+    public static final Codec<Identifier> CODEC = Codec.STRING.comapFlatMap(
+        s -> {
+            try {
+                return DataResult.success(Identifier.of(s));
+            } catch (IllegalArgumentException e) {
+                return DataResult.error(() -> "Invalid identifier: " + s);
+            }
+        }, Identifier::toString
+    );
     public static final char PATH_SEPARATOR = '/';
     private final String path;
 

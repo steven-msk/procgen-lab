@@ -71,14 +71,14 @@ public class NoiseRangeTest {
     /// This catches parameter mix-ups, e.g. offset accidentally read from gain.
     @Test
     void ridgedSingleOctaveMatchesClosedFormValue() {
-        NoiseSamplerProvider constantHalf = seed -> (x, y) -> 0.5d;
+        NoiseSamplerProvider constantHalf = seed -> (x, y, z) -> 0.5d;
 
         NoiseFunction a = createCombiner("a", RIDGED_MULTIFRACTAL, constantHalf,
                 RidgedMultifractalCombiner.Parameters.of(1, 1.0d, 2.0d, 0.5d, 2.0d, 1.0d));
-        Assertions.assertEquals(0.25d, at(bind(a, 0L), 3.3d, 4.4d), 1e-12d);
+        Assertions.assertEquals(0.25d, at(bind(a, 0L), 3.3d, 4.4d, 5.5d), 1e-12d);
 
         NoiseFunction b = createCombiner("b", RIDGED_MULTIFRACTAL, constantHalf,
                 RidgedMultifractalCombiner.Parameters.of(1, 1.0d, 2.0d, 0.5d, 1.5d, 0.8d));
-        Assertions.assertEquals(0.09d / 0.64d, at(bind(b, 0L), 3.3d, 4.4d), 1e-12d);
+        Assertions.assertEquals(0.09d / 0.64d, at(bind(b, 0L), 3.3d, 4.4d, 5.5d), 1e-12d);
     }
 }

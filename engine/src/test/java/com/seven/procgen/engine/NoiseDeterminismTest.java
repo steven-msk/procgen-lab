@@ -14,10 +14,10 @@ import static com.seven.procgen.engine.noise.function.NoiseFunctions.createSampl
 import static com.seven.procgen.engine.noise.sampler.NoiseSamplerType.PERLIN;
 
 public class NoiseDeterminismTest {
-    private static NoiseFunction tree() {
+    static NoiseFunction tree() {
         NoiseFunction base = createSampler("base", PERLIN, 0.1d, 0.1d, 1.0d);
         NoiseFunction ridged = createCombiner("ridged", RIDGED_MULTIFRACTAL, PERLIN,
-                RidgedMultifractalCombiner.Parameters.of(5, 0.05d, 2.0d, 0.5d, 2.0d, 1.0d));
+            RidgedMultifractalCombiner.Parameters.of(5, 0.05d, 2.0d, 0.5d, 2.0d, 1.0d));
         NoiseFunction fbm = createCombiner("fbm", FBM, PERLIN, FBMCombiner.Parameters.of(-2, 1.0d, 1.0d, 1.0d, 1.0d));
         return base.add(ridged.mul(0.5d)).add(fbm.abs());
     }
@@ -43,10 +43,10 @@ public class NoiseDeterminismTest {
     @Test
     void unboundTreeThrowsAndBindingDoesNotMutateIt() {
         NoiseFunction tree = tree();
-        Assertions.assertThrows(IllegalStateException.class, () -> at(tree, 0.5d, 0.5d));
+        Assertions.assertThrows(IllegalStateException.class, () -> at(tree, 0.5d, 0.5d, 0.5d));
 
         bind(tree, 1L);
 
-        Assertions.assertThrows(IllegalStateException.class, () -> at(tree, 0.5d, 0.5d));
+        Assertions.assertThrows(IllegalStateException.class, () -> at(tree, 0.5d, 0.5d, 0.5d));
     }
 }
