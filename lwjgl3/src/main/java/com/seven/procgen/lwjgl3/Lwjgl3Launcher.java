@@ -4,29 +4,43 @@ import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Application;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3ApplicationConfiguration;
 import com.seven.procgen.ApplicationConfig;
 import com.seven.procgen.ProcgenLab;
+import joptsimple.OptionParser;
+import joptsimple.OptionSet;
+import joptsimple.OptionSpec;
 
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
     static void main(String[] args) {
         if (StartupHelper.startNewJvmIfRequired()) return; // This handles macOS support and helps on Windows.
-        createApplication();
+        createApplication(args);
     }
 
-    private static Lwjgl3Application createApplication() {
-        ApplicationConfig config = getDefaultApplicationConfig();
+    private static Lwjgl3Application createApplication(String[] args) {
+        ApplicationConfig config = getDefaultApplicationConfig(args);
         Lwjgl3ApplicationConfiguration lwjgl3Config = getDefaultConfiguration(config);
         return new Lwjgl3Application(new ProcgenLab(config), lwjgl3Config);
     }
 
-    private static ApplicationConfig getDefaultApplicationConfig() {
-        int width = 640;
-        int height = 480;
-        String title = "procgen-lab";
+    private static ApplicationConfig getDefaultApplicationConfig(String[] args) {
+        OptionParser parser = new OptionParser();
+        OptionSpec<Integer> widthSpec = parser.accepts("width").withRequiredArg().ofType(Integer.class).defaultsTo(640);
+        OptionSpec<Integer> heightSpec = parser.accepts("height").withRequiredArg().ofType(Integer.class).defaultsTo(480);
+        OptionSpec<String> titleSpec = parser.accepts("title").withRequiredArg().ofType(String.class).defaultsTo("procgen-lab");
+        OptionSpec<Void> vsyncSpec = parser.accepts("vsync");
+        OptionSpec<Integer> targetFpsSpec = parser.accepts("targetFps").withRequiredArg().ofType(Integer.class).defaultsTo(0);
+        OptionSpec<ApplicationConfig.Graphics.FPSLimit> fpsLimitSpec = parser.accepts("fpsLimit").withRequiredArg().ofType(String.class)
+                .withValuesConvertedBy(ApplicationConfig.Graphics.FPSLimit.valueConverter())
+                .defaultsTo(ApplicationConfig.Graphics.FPSLimit.VSYNC_MATCH_FRACTIONAL);
+        OptionSet optionSet = parser.parse(args);
+
+        int width = optionSet.valueOf(widthSpec);
+        int height = optionSet.valueOf(heightSpec);
+        String title = optionSet.valueOf(titleSpec);
         ApplicationConfig.Window window = new ApplicationConfig.Window(width, height, title);
 
-        boolean vsync = true;
-        int targetFps = 0;
-        ApplicationConfig.Graphics.FPSLimit fpsLimit = ApplicationConfig.Graphics.FPSLimit.VSYNC_MATCH_FRACTIONAL;
+        boolean vsync = optionSet.has(vsyncSpec);
+        int targetFps = optionSet.valueOf(targetFpsSpec);
+        ApplicationConfig.Graphics.FPSLimit fpsLimit = optionSet.valueOf(fpsLimitSpec);
         ApplicationConfig.Graphics graphics = new ApplicationConfig.Graphics(fpsLimit, targetFps, vsync,
                 () -> Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate);
 

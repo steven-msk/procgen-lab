@@ -78,6 +78,9 @@ subprojects {
         implementation("it.unimi.dsi:fastutil:8.5.19")
         // Source: https://mvnrepository.com/artifact/com.google.guava/guava
         implementation("com.google.guava:guava:33.7.2-jre")
+
+        // Source: https://mvnrepository.com/artifact/net.sf.jopt-simple/jopt-simple
+        implementation("net.sf.jopt-simple:jopt-simple:5.0.4")
     }
 }
 
