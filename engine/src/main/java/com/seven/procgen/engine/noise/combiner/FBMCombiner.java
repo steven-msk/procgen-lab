@@ -43,7 +43,7 @@ public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
     }
 
     @Override
-    public double compute(double x, double y) {
+    public double compute(double x, double y, double z) {
         double value = 0.0d;
         double factor = lowestFreqInputFactor;
         double valueFactor = lowestFreqValueFactor;
@@ -51,7 +51,7 @@ public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
         for (int i = 0; i < samplerLevels.length; i++) {
             NoiseSampler sampler = samplerLevels[i];
             if (sampler != null) {
-                double noise = sampler.sample(NoiseMath.wrap(x * factor), NoiseMath.wrap(y * factor));
+                double noise = sampler.sample(NoiseMath.wrap(x * factor), NoiseMath.wrap(y * factor), NoiseMath.wrap(z * factor));
                 value += octaveMultipliers[i] * noise * valueFactor;
             }
             factor *= lacunarity;

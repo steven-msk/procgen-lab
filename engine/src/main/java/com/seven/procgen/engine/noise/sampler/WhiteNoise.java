@@ -1,8 +1,6 @@
 package com.seven.procgen.engine.noise.sampler;
 
-/**
- * Basic white noise. Returns in [-1, 1]
- */
+/// Basic white noise. Returns in [-1, 1]
 public class WhiteNoise implements NoiseSampler {
     private final long seed;
 
@@ -11,10 +9,11 @@ public class WhiteNoise implements NoiseSampler {
     }
 
     @Override
-    public double sample(double x, double y) {
+    public double sample(double x, double y, double z) {
         long h = seed
                 ^ ((long)Math.floor(x) * 0x9E3779B97F4A7C15L)
-                ^ ((long)Math.floor(y) * 0xC2B2AE3D27D4EB4FL);
+                ^ ((long)Math.floor(y) * 0xC2B2AE3D27D4EB4FL)
+                ^ ((long)Math.floor(z) * 0x165667B19E3779F9L);
         h ^= h >>> 33;
         h *= 0xff51afd7ed558ccdL;
         h ^= h >>> 33;

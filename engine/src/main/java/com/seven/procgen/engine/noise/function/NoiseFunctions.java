@@ -11,23 +11,23 @@ import java.util.function.DoubleUnaryOperator;
 public final class NoiseFunctions {
 
     public static NoiseFunction createSampler(String id, NoiseSamplerProvider provider) {
-        return createSampler(id, provider, 1.0d, 1.0d);
+        return createSampler(id, provider, 1.0d, 1.0d, 1.0d);
     }
 
-    public static NoiseFunction createSampler(String id, NoiseSamplerProvider provider, double xScale, double yScale) {
-        return new Sampler(new NoiseFunction.SamplerEntry(Identifier.of(id), provider, null), xScale, yScale);
+    public static NoiseFunction createSampler(String id, NoiseSamplerProvider provider, double xScale, double yScale, double zScale) {
+        return new Sampler(new NoiseFunction.SamplerEntry(Identifier.of(id), provider, null), xScale, yScale, zScale);
     }
 
     public static <T extends NoiseCombiner.Parameters> NoiseFunction createCombiner(
             String id, NoiseCombinerProvider<T> provider, NoiseSamplerProvider samplerProvider, T parameters
     ) {
-        return createCombiner(id, provider, samplerProvider, parameters, 1.0d, 1.0d);
+        return createCombiner(id, provider, samplerProvider, parameters, 1.0d, 1.0d, 1.0d);
     }
 
     public static <T extends NoiseCombiner.Parameters> NoiseFunction createCombiner(
-            String id, NoiseCombinerProvider<T> provider, NoiseSamplerProvider samplerProvider, T parameters, double xScale, double yScale
+            String id, NoiseCombinerProvider<T> provider, NoiseSamplerProvider samplerProvider, T parameters, double xScale, double yScale, double zScale
     ) {
-        return new Combiner<>(new NoiseFunction.CombinerEntry<>(Identifier.of(id), provider, samplerProvider, parameters, null), xScale, yScale);
+        return new Combiner<>(new NoiseFunction.CombinerEntry<>(Identifier.of(id), provider, samplerProvider, parameters, null), xScale, yScale, zScale);
     }
 
     public static NoiseFunction constant(double value) {
@@ -62,7 +62,7 @@ public final class NoiseFunctions {
         return new BinaryFunction(BinaryOperation.SUBTRACT, a, b);
     }
 
-    public static NoiseFunction mult(NoiseFunction a, NoiseFunction b) {
+    public static NoiseFunction mul(NoiseFunction a, NoiseFunction b) {
         return new BinaryFunction(BinaryOperation.MULTIPLY, a, b);
     }
 
@@ -90,27 +90,37 @@ public final class NoiseFunctions {
         return new Lerp(a, b, t);
     }
 
-    public record Sampler(NoiseFunction.SamplerEntry samplerEntry, double xScale, double yScale) implements NoiseFunction {
+    public record Sampler(NoiseFunction.SamplerEntry samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
         @Override
         public double compute(Context context) {
-            return samplerEntry.get(context.x() * xScale, context.y() * yScale);
+            return samplerEntry.get(context.x() * xScale, context.y() * yScale, context.z() * zScale);
         }
 
         @Override
         public NoiseFunction mapAll(Visitor visitor) {
-            return visitor.apply(new Sampler(visitor.visitSampler(this.samplerEntry), this.xScale, this.yScale));
+            return visitor.apply(new Sampler(visitor.visitSampler(samplerEntry), xScale, yScale, zScale));
+        }
+
+        @Override
+        public String toString() {
+            return "Sampler[" + samplerEntry + ", xScale=" + xScale + ", yscale=" + yScale + "]";
         }
     }
 
-    public record Combiner<T extends NoiseCombiner.Parameters>(NoiseFunction.CombinerEntry<T> combinerEntry, double xScale, double yScale) implements NoiseFunction {
+    public record Combiner<T extends NoiseCombiner.Parameters>(NoiseFunction.CombinerEntry<T> combinerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
         @Override
         public double compute(Context context) {
-            return combinerEntry.combine(context.x() * xScale, context.y() * yScale);
+            return combinerEntry.combine(context.x() * xScale, context.y() * yScale, context.z() * zScale);
         }
 
         @Override
         public NoiseFunction mapAll(Visitor visitor) {
-            return visitor.apply(new Combiner<>(visitor.visitCombiner(this.combinerEntry), xScale, yScale));
+            return visitor.apply(new Combiner<>(visitor.visitCombiner(combinerEntry), xScale, yScale, zScale));
+        }
+
+        @Override
+        public String toString() {
+            return "Combiner[" + combinerEntry + ", xScale=" + xScale + ", yScale=" + yScale + "]";
         }
     }
 
@@ -124,6 +134,11 @@ public final class NoiseFunctions {
         public NoiseFunction mapAll(Visitor visitor) {
             return visitor.apply(this);
         }
+
+        @Override
+        public String toString() {
+            return "Constant[" + value + "]";
+        }
     }
 
     public record UnaryFunction(UnaryOperation operation, NoiseFunction input) implements NoiseFunction {
@@ -136,6 +151,11 @@ public final class NoiseFunctions {
         public NoiseFunction mapAll(Visitor visitor) {
             return visitor.apply(new UnaryFunction(operation, input.mapAll(visitor)));
         }
+
+        @Override
+        public String toString() {
+            return operation + "[" + input + "]";
+        }
     }
 
     public record BinaryFunction(BinaryOperation operation, NoiseFunction a, NoiseFunction b) implements NoiseFunction {
@@ -147,6 +167,11 @@ public final class NoiseFunctions {
         @Override
         public NoiseFunction mapAll(Visitor visitor) {
             return visitor.apply(new BinaryFunction(operation, a.mapAll(visitor), b.mapAll(visitor)));
+        }
+
+        @Override
+        public String toString() {
+            return operation + "[" + a + ", " + b + "]";
         }
     }
 
@@ -164,6 +189,11 @@ public final class NoiseFunctions {
         public NoiseFunction mapAll(Visitor visitor) {
             return visitor.apply(new Clamp(input.mapAll(visitor), min, max));
         }
+
+        @Override
+        public String toString() {
+            return "Clamp[" + min + ".." + max + ": " + input + "]";
+        }
     }
 
     /// Not clamped, t is expected in [0, 1]
@@ -178,6 +208,11 @@ public final class NoiseFunctions {
         public NoiseFunction mapAll(Visitor visitor) {
             return visitor.apply(new Lerp(a.mapAll(visitor), b.mapAll(visitor), t.mapAll(visitor)));
         }
+
+        @Override
+        public String toString() {
+            return "Lerp[" + a + " -> " + b + " : " + t + "]";
+        }
     }
 
     /// input * scale + bias. Handy for remapping ranges, e.g. [-1, 1] -> [0, 1] is scale 0.5, bias 0.5.
@@ -190,6 +225,11 @@ public final class NoiseFunctions {
         @Override
         public NoiseFunction mapAll(Visitor visitor) {
             return visitor.apply(new Affine(input.mapAll(visitor), scale, bias));
+        }
+
+        @Override
+        public String toString() {
+            return "Affine[" + input + " * " + scale + " + " + bias + "]";
         }
     }
 

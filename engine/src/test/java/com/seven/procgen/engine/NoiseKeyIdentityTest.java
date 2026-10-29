@@ -47,7 +47,7 @@ public class NoiseKeyIdentityTest {
 
     @Test
     void reorderingSiblingsDoesNotChangeResults() {
-        NoiseFunction a = createSampler("a", PERLIN, 0.1d, 0.1d);
+        NoiseFunction a = createSampler("a", PERLIN, 0.1d, 0.1d, 1.0d);
         NoiseFunction b = ridged("b");
 
         // a is bound before b in one tree and after b in the other
@@ -58,7 +58,7 @@ public class NoiseKeyIdentityTest {
 
     @Test
     void aNodesNoiseDoesNotDependOnWhatElseIsInTheTree() {
-        NoiseFunction a = createSampler("a", PERLIN, 0.1d, 0.1d);
+        NoiseFunction a = createSampler("a", PERLIN, 0.1d, 0.1d, 1.0d);
         NoiseFunction b = ridged("b");
 
         double[] together = sampleGrid(bind(a.add(b), SEED));

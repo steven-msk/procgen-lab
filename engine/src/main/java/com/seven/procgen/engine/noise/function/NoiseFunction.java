@@ -7,6 +7,7 @@ import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.random.RandomFork;
 import com.seven.procgen.engine.random.RandomSource;
 import com.seven.procgen.engine.registry.Identifier;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 public interface NoiseFunction {
@@ -23,11 +24,11 @@ public interface NoiseFunction {
     }
 
     default NoiseFunction mul(NoiseFunction other) {
-        return NoiseFunctions.mult(this, other);
+        return NoiseFunctions.mul(this, other);
     }
 
     default NoiseFunction mul(double v) {
-        return NoiseFunctions.mult(this, NoiseFunctions.constant(v));
+        return NoiseFunctions.mul(this, NoiseFunctions.constant(v));
     }
 
     default NoiseFunction clamp(double min, double max) {
@@ -50,32 +51,46 @@ public interface NoiseFunction {
         double x();
 
         double y();
+
+        double z();
     }
 
-    record SinglePointContext(double x, double y) implements Context {
+    record SinglePointContext(double x, double y, double z) implements Context {
     }
 
     record SamplerEntry(Identifier id, NoiseSamplerProvider provider, @Nullable NoiseSampler sampler) {
-        public double get(double x, double y) {
+        public double get(double x, double y, double z) {
             if (sampler == null) throw new IllegalStateException("Compute called with null sampler");
-            return sampler.sample(x, y);
+            return sampler.sample(x, y, z);
         }
 
         public SamplerEntry bind(RandomFork fork) {
             RandomSource random = fork.fromHashOf(id.toString());
             return new SamplerEntry(id, provider, provider.getSampler(random.nextLong()));
         }
+
+        @Override
+        @NonNull
+        public String toString() {
+            return id.toString();
+        }
     }
 
     record CombinerEntry<T extends NoiseCombiner.Parameters>(Identifier id, NoiseCombinerProvider<T> provider, NoiseSamplerProvider samplerProvider, T parameters, @Nullable NoiseCombiner<T> combiner) {
-        public double combine(double x, double y) {
+        public double combine(double x, double y, double z) {
             if (combiner == null) throw new IllegalStateException("Combine called with null combiner");
-            return combiner.compute(x, y);
+            return combiner.compute(x, y, z);
         }
 
         public CombinerEntry<T> bind(RandomFork fork) {
             RandomSource random = fork.fromHashOf(id.toString());
             return new CombinerEntry<>(id, provider, samplerProvider, parameters, provider.getCombiner(random, samplerProvider, parameters));
+        }
+
+        @Override
+        @NonNull
+        public String toString() {
+            return id.toString();
         }
     }
 }

@@ -15,7 +15,7 @@ import static com.seven.procgen.engine.noise.sampler.NoiseSamplerType.PERLIN;
 
 public class NoiseDeterminismTest {
     private static NoiseFunction tree() {
-        NoiseFunction base = createSampler("base", PERLIN, 0.1d, 0.1d);
+        NoiseFunction base = createSampler("base", PERLIN, 0.1d, 0.1d, 1.0d);
         NoiseFunction ridged = createCombiner("ridged", RIDGED_MULTIFRACTAL, PERLIN,
                 RidgedMultifractalCombiner.Parameters.of(5, 0.05d, 2.0d, 0.5d, 2.0d, 1.0d));
         NoiseFunction fbm = createCombiner("fbm", FBM, PERLIN, FBMCombiner.Parameters.of(-2, 1.0d, 1.0d, 1.0d, 1.0d));

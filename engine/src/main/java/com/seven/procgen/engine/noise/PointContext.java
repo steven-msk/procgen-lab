@@ -5,19 +5,21 @@ import com.seven.procgen.engine.noise.function.NoiseFunction;
 public class PointContext implements NoiseFunction.Context {
     private double x;
     private double y;
+    private double z;
 
-    public PointContext(double x, double y) {
+    public PointContext(double x, double y, double z) {
         this.x = x;
         this.y = y;
     }
 
     public PointContext() {
-        this(0, 0);
+        this(0, 0, 0);
     }
 
-    public PointContext set(double x, double y) {
+    public PointContext set(double x, double y, double z) {
         this.x = x;
         this.y = y;
+        this.z = z;
         return this;
     }
 
@@ -31,6 +33,11 @@ public class PointContext implements NoiseFunction.Context {
         return this;
     }
 
+    public PointContext setZ(double z) {
+        this.z = z;
+        return this;
+    }
+
     @Override
     public double x() {
         return x;
@@ -39,5 +46,10 @@ public class PointContext implements NoiseFunction.Context {
     @Override
     public double y() {
         return y;
+    }
+
+    @Override
+    public double z() {
+        return z;
     }
 }

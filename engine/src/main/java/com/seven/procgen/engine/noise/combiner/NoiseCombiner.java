@@ -14,7 +14,7 @@ public abstract class NoiseCombiner<T extends NoiseCombiner.Parameters> {
         this.parameters = parameters;
     }
 
-    public abstract double compute(double x, double y);
+    public abstract double compute(double x, double y, double z);
 
     public interface Parameters {
     }

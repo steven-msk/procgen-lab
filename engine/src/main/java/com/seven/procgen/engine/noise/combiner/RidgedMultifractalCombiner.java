@@ -46,13 +46,13 @@ public final class RidgedMultifractalCombiner extends NoiseCombiner<RidgedMultif
     }
 
     @Override
-    public double compute(double x, double y) {
+    public double compute(double x, double y, double z) {
         double result = 0.0d;
         double weight = 1.0d;
         double f = frequency;
 
         for (int i = 0; i < samplers.length; i++) {
-            double n = samplers[i].sample(NoiseMath.wrap(x * f), NoiseMath.wrap(y * f));
+            double n = samplers[i].sample(NoiseMath.wrap(x * f), NoiseMath.wrap(y * f), NoiseMath.wrap(z * f));
 
             double signal = offset - Math.abs(n); // fold: creates the ridge at n == 0
             signal *= signal;                     // sharpens the ridge
