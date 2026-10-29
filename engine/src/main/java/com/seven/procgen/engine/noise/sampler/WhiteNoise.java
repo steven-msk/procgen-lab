@@ -17,6 +17,8 @@ public class WhiteNoise implements NoiseSampler {
         h ^= h >>> 33;
         h *= 0xff51afd7ed558ccdL;
         h ^= h >>> 33;
+        h *= 0xc4ceb9fe1a85ec53L;
+        h ^= h >>> 33;
         return ((h >>> 11) * 0x1.0p-53) * 2.0d - 1.0d;
     }
 }
