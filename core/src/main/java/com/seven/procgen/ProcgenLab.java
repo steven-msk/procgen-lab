@@ -10,6 +10,7 @@ import com.google.gson.JsonElement;
 import com.mojang.serialization.JsonOps;
 import com.seven.procgen.engine.logging.LogUtil;
 import com.seven.procgen.engine.noise.NoiseField;
+import com.seven.procgen.engine.noise.NoiseGraph;
 import com.seven.procgen.engine.noise.NoiseState;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerType;
 import com.seven.procgen.engine.noise.combiner.RidgedMultifractalCombiner;
@@ -55,7 +56,7 @@ public class ProcgenLab extends ApplicationAdapter {
         NoiseFunction a = mountains.add(detail.mul(0.2d));
 
         NoiseFunction mask = createSampler("mask", NoiseSamplerType.PERLIN, 0.005d, 0.005d, 1.0d);
-        NoiseFunction b = lerp(remap01(plains), a, remap01(mask));
+        NoiseFunction b = lerp(remap01(plains), a.add(mountains), remap01(mask));
         return b;
     }
 
@@ -75,7 +76,7 @@ public class ProcgenLab extends ApplicationAdapter {
                 return input;
             }
         });
-        JsonElement json = NoiseFunction.CODEC.encodeStart(JsonOps.INSTANCE, noise).result().orElseThrow();
+        JsonElement json = NoiseGraph.TREE_CODEC.encodeStart(JsonOps.INSTANCE, noise).result().orElseThrow();
         LOGGER.info(new GsonBuilder().setPrettyPrinting().create().toJson(json));
         this.field = NoiseField.sample(noise, size, size, 0.0d, 0.0d, 1.0d);
         this.preview = new PixmapPreviewRenderer();
