@@ -12,6 +12,7 @@ public final class NoiseFunctionTypes {
         register(registry, "clamp", NoiseFunctions.Clamp.CODEC);
         register(registry, "lerp", NoiseFunctions.Lerp.CODEC);
         register(registry, "affine", NoiseFunctions.Affine.CODEC);
+        register(registry, "reference", NoiseFunctions.Reference.CODEC);
         return register(registry, "constant", NoiseFunctions.Constant.CODEC);
     }
 

@@ -12,6 +12,7 @@ import org.jspecify.annotations.NonNull;
 
 import java.util.function.DoubleBinaryOperator;
 import java.util.function.DoubleUnaryOperator;
+import java.util.function.UnaryOperator;
 
 public final class NoiseFunctions {
 
@@ -115,6 +116,11 @@ public final class NoiseFunctions {
         }
 
         @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            return this;
+        }
+
+        @Override
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
         }
@@ -153,6 +159,11 @@ public final class NoiseFunctions {
         }
 
         @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            return this;
+        }
+
+        @Override
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
         }
@@ -178,6 +189,10 @@ public final class NoiseFunctions {
             return visitor.apply(this);
         }
 
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            return this;
+        }
 
         @Override
         public MapCodec<? extends NoiseFunction> codec() {
@@ -207,6 +222,12 @@ public final class NoiseFunctions {
         }
 
         @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction newInput = function.apply(input);
+            return newInput == input ? this : new UnaryFunction(operation, newInput);
+        }
+
+        @Override
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
         }
@@ -232,6 +253,13 @@ public final class NoiseFunctions {
         @Override
         public NoiseFunction mapAll(Visitor visitor) {
             return visitor.apply(new BinaryFunction(operation, a.mapAll(visitor), b.mapAll(visitor)));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction newA = function.apply(a);
+            NoiseFunction newB = function.apply(b);
+            return newA == a && newB == b ? this : new BinaryFunction(operation, newA, newB);
         }
 
         @Override
@@ -267,6 +295,12 @@ public final class NoiseFunctions {
         }
 
         @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction newInput = function.apply(input);
+            return newInput == input ? this : new Clamp(newInput, min, max);
+        }
+
+        @Override
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
         }
@@ -294,6 +328,14 @@ public final class NoiseFunctions {
         @Override
         public NoiseFunction mapAll(Visitor visitor) {
             return visitor.apply(new Lerp(from.mapAll(visitor), to.mapAll(visitor), t.mapAll(visitor)));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction newFrom = function.apply(from);
+            NoiseFunction newTo = function.apply(to);
+            NoiseFunction newT = function.apply(t);
+            return newFrom == from && newTo == to && newT == t ? this : new Lerp(newFrom, newTo, newT);
         }
 
         @Override
@@ -326,6 +368,12 @@ public final class NoiseFunctions {
         }
 
         @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction newInput = function.apply(input);
+            return newInput == input ? this : new Affine(newInput, scale, bias);
+        }
+
+        @Override
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
         }
@@ -333,6 +381,32 @@ public final class NoiseFunctions {
         @Override
         public @NonNull String toString() {
             return "Affine[" + input + " * " + scale + " + " + bias + "]";
+        }
+    }
+
+    public record Reference(Identifier id) implements NoiseFunction {
+        public static final MapCodec<Reference> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Identifier.CODEC.fieldOf("id").forGetter(Reference::id)
+        ).apply(i, Reference::new));
+
+        @Override
+        public double compute(Context context) {
+            throw new IllegalStateException("Unresolved reference '" + id + "'");
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            throw new IllegalStateException("Unresolved reference '" + id + "'");
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            return this;
         }
     }
 

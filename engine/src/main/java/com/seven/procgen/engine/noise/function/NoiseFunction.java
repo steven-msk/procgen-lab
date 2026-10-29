@@ -14,8 +14,10 @@ import com.seven.procgen.engine.registry.Registry;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.UnaryOperator;
 
 public interface NoiseFunction {
     Codec<NoiseFunction> CODEC = Registry.NOISE_FUNCTION.byNameCodec().dispatch(NoiseFunction::codec, Function.identity());
@@ -25,6 +27,9 @@ public interface NoiseFunction {
     MapCodec<? extends NoiseFunction> codec();
 
     NoiseFunction mapAll(Visitor visitor);
+
+    /// Non-recursive; returns 'this' if no child changed
+    NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function);
 
     default NoiseFunction abs() {
         return NoiseFunctions.abs(this);
@@ -104,6 +109,16 @@ public interface NoiseFunction {
         public @NonNull String toString() {
             return id.toString();
         }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(id, provider);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof SamplerEntry e && id.equals(e.id) && provider.equals(e.provider);
+        }
     }
 
     record CombinerEntry<T extends NoiseCombiner.Parameters>(Identifier id, NoiseCombinerProvider<T> provider, NoiseSamplerProvider samplerProvider, T parameters, @Nullable NoiseCombiner<T> combiner) {
@@ -118,9 +133,22 @@ public interface NoiseFunction {
         }
 
         @Override
-        @NonNull
-        public String toString() {
+        public @NonNull String toString() {
             return id.toString();
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(id, provider, samplerProvider, parameters);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof CombinerEntry<?> other
+                && id.equals(other.id)
+                && provider.equals(other.provider)
+                && samplerProvider.equals(other.samplerProvider)
+                && parameters.equals(other.parameters);
         }
     }
 }
