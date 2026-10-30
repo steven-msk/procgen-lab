@@ -3,7 +3,7 @@ package com.seven.procgen.render;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.Disposable;
-import com.seven.procgen.engine.noise.data.NoiseField;
+import com.seven.procgen.engine.noise.data.SampleField;
 import com.seven.procgen.engine.util.color.ColorRamp;
 import org.jspecify.annotations.Nullable;
 
@@ -18,7 +18,7 @@ public class NoiseImageRenderer implements Disposable {
 
     /// Maps [rangeMin, rangeMax] onto the ramp. With highlight on, values outside the range
     /// are drawn cyan (below) or magenta (above) instead of clamping silently.
-    public Texture update(NoiseField field, ColorRamp ramp, double rangeMin, double rangeMax, boolean highlightOutOfRange) {
+    public Texture update(SampleField field, ColorRamp ramp, double rangeMin, double rangeMax, boolean highlightOutOfRange) {
         ensureSize(field.width(), field.height());
         Pixmap target = this.pixmap;
 
@@ -45,7 +45,7 @@ public class NoiseImageRenderer implements Disposable {
     }
 
     /// Stretches the field's own min/max over the ramp. Good for seeing shape, but hides absolute range problems.
-    public Texture updateAutoRange(NoiseField field, ColorRamp ramp) {
+    public Texture updateAutoRange(SampleField field, ColorRamp ramp) {
         return update(field, ramp, field.min(), field.max(), false);
     }
 

@@ -8,8 +8,8 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.seven.procgen.engine.logging.LogUtil;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerType;
 import com.seven.procgen.engine.noise.combiner.RidgedMultifractalCombiner;
-import com.seven.procgen.engine.noise.data.NoiseField;
 import com.seven.procgen.engine.noise.data.NoiseState;
+import com.seven.procgen.engine.noise.data.SampleField;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.registry.Registry;
@@ -30,7 +30,7 @@ public class ProcgenLab extends ApplicationAdapter {
     private final ApplicationConfig config;
     private final ImGuiContextHandle imGuiContextHandle;
     private NoiseImageRenderer renderer;
-    private NoiseField field;
+    private SampleField field;
     private static final int NODE_IMAGE_SIZE = 128;
     private NoiseTreeImage treeImage;
     private ColorRamp ramp = ColorRamp.TERRAIN;
@@ -68,7 +68,7 @@ public class ProcgenLab extends ApplicationAdapter {
         long seed = 0L;
 
         NoiseFunction noise = tree().mapAll(new NoiseState(seed));
-        this.field = NoiseField.sample(noise, size, size, 0.0d, 0.0d, 1.0d);
+        this.field = SampleField.sampleFunction(noise, size, size, 0.0d, 0.0d, 1.0d);
         this.renderer = new NoiseImageRenderer();
         this.treeImage = new NoiseTreeImage(noise, new NoiseTreeImage.SamplerContext(NODE_IMAGE_SIZE, 0.0d, 0.0d, (double)size / NODE_IMAGE_SIZE), currentConfig());
         refresh();

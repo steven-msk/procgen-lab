@@ -2,7 +2,7 @@ package com.seven.procgen.engine.noise.data;
 
 /// Fraction of finite sampler per bin over [min, max], and the fractions that fell outside of it
 public record Histogram(float[] fractions, float peak, double min, double max, float below, float above) {
-    public static Histogram of(NoiseField field, double min, double max, int binCount) {
+    public static Histogram of(SampleField field, double min, double max, int binCount) {
         int[] counts = new int[binCount];
         int below = 0;
         int above = 0;

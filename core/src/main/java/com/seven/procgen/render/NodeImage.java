@@ -2,18 +2,18 @@ package com.seven.procgen.render;
 
 import com.badlogic.gdx.utils.Disposable;
 import com.seven.procgen.engine.noise.data.Histogram;
-import com.seven.procgen.engine.noise.data.NoiseField;
+import com.seven.procgen.engine.noise.data.SampleField;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.util.color.ColorRamp;
 import imgui.ImGui;
 import org.jspecify.annotations.Nullable;
 
 public final class NodeImage implements Disposable {
-    private static final int HISTOGRAM_BINS = 64;
+    private static final int HISTOGRAM_BINS = 128;
     private final NoiseFunction node;
     private final NoiseImageRenderer renderer = new NoiseImageRenderer();
-    private @Nullable NoiseField field;
-    private NoiseField.@Nullable Stats stats;
+    private @Nullable SampleField field;
+    private SampleField.@Nullable Stats stats;
     private @Nullable Histogram histogram;
     private float[] slice = new float[0];
     private double rangeMin;
@@ -24,15 +24,17 @@ public final class NodeImage implements Disposable {
     private @Nullable String aboveLine;
     private int appliedVersion = -1;
 
-
-    public NodeImage(NoiseFunction node) {
+    public NodeImage(NoiseFunction node, @Nullable SampleField sampled) {
         this.node = node;
+        this.field = sampled;
     }
 
     void update(NoiseTreeImage.SamplerContext s, Config config, int viewVersion) {
-        if (field == null) {
-            field = NoiseField.sample(node, s.size(), s.size(), s.originX(), s.originY(), s.step());
-            stats = NoiseField.Stats.of(field);
+        if (field == null) { // fallback: node wasn't reached on the grid (e.g. under a warp)
+            field = SampleField.sampleFunction(node, s.size(), s.size(), s.originX(), s.originY(), s.step());
+        }
+        if (stats == null) {
+            stats = SampleField.Stats.of(field);
             slice = row(field, s.size() / 2);
             statsLine = String.format("min %.3f max %.3f mean %.3f std %.3f%s",
                 stats.min(), stats.max(), stats.mean(), stats.stdDeviation(),
@@ -53,8 +55,8 @@ public final class NodeImage implements Disposable {
         aboveLine = histogram.above() > 0f ? String.format("%.1f above range", histogram.above() * 100f) : null;
     }
 
-    void draw(float thumbSize) {
-        ImGui.image(renderer.texture().getTextureObjectHandle(), thumbSize, thumbSize);
+    void draw(float imageSize) {
+        ImGui.image(renderer.texture().getTextureObjectHandle(), imageSize, imageSize);
         ImGui.sameLine();
         ImGui.beginGroup();
         float[] bars = histogram.fractions();
@@ -67,7 +69,7 @@ public final class NodeImage implements Disposable {
         ImGui.endGroup();
     }
 
-    private static float[] row(NoiseField field, int y) {
+    private static float[] row(SampleField field, int y) {
         float[] out = new float[field.width()];
         for (int x = 0; x < out.length; x++) {
             double v = field.get(x, y);
