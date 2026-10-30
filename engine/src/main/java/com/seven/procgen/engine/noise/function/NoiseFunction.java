@@ -9,8 +9,7 @@ import com.seven.procgen.engine.noise.sampler.NoiseSampler;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.random.RandomFork;
 import com.seven.procgen.engine.random.RandomSource;
-import com.seven.procgen.engine.registry.Identifier;
-import com.seven.procgen.engine.registry.Registry;
+import com.seven.procgen.engine.registry.*;
 import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
@@ -90,8 +89,8 @@ public interface NoiseFunction {
     record SinglePointContext(double x, double y, double z) implements Context {
     }
 
-    record SamplerEntry(Identifier id, NoiseSamplerProvider provider, @Nullable NoiseSampler sampler) {
-        public static SamplerEntry of(Identifier id, NoiseSamplerProvider provider) {
+    record SamplerEntry(Identifier id, RegistryKey<NoiseSamplerProvider> providerKey, @Nullable NoiseSampler sampler) {
+        public static SamplerEntry of(Identifier id, RegistryKey<NoiseSamplerProvider> provider) {
             return new SamplerEntry(id, provider, null);
         }
 
@@ -100,9 +99,10 @@ public interface NoiseFunction {
             return sampler.sample(x, y, z);
         }
 
-        public SamplerEntry bind(RandomFork fork) {
+        public SamplerEntry bind(RandomFork fork, RegistryEntryLookup.RegistryLookup registryLookup) {
+            NoiseSamplerProvider provider = registryLookup.getOrThrow(Registries.NOISE_SAMPLER_PROVIDER).getOrThrow(providerKey).value();
             RandomSource random = fork.fromHashOf(id.toString());
-            return new SamplerEntry(id, provider, provider.getSampler(random.nextLong()));
+            return new SamplerEntry(id, providerKey, provider.getSampler(random.nextLong()));
         }
 
         @Override
@@ -112,24 +112,30 @@ public interface NoiseFunction {
 
         @Override
         public int hashCode() {
-            return Objects.hash(id, provider);
+            return Objects.hash(id, providerKey);
         }
 
         @Override
         public boolean equals(Object obj) {
-            return obj instanceof SamplerEntry e && id.equals(e.id) && provider.equals(e.provider);
+            return obj instanceof SamplerEntry e && id.equals(e.id) && providerKey.equals(e.providerKey);
         }
     }
 
-    record CombinerEntry<T extends NoiseCombiner.Parameters>(Identifier id, NoiseCombinerProvider<T> provider, NoiseSamplerProvider samplerProvider, T parameters, @Nullable NoiseCombiner<T> combiner) {
+    record CombinerEntry<T extends NoiseCombiner.Parameters>(
+        Identifier id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey,
+        RegistryKey<NoiseSamplerProvider> samplerKey, T parameters, @Nullable NoiseCombiner<T> combiner
+    ) {
         public double combine(double x, double y, double z) {
             if (combiner == null) throw new IllegalStateException("Combine called with null combiner");
             return combiner.compute(x, y, z);
         }
 
-        public CombinerEntry<T> bind(RandomFork fork) {
+        @SuppressWarnings("unchecked")
+        public CombinerEntry<T> bind(RandomFork fork, RegistryEntryLookup.RegistryLookup registryLookup) {
+            NoiseSamplerProvider sampler = registryLookup.getOrThrow(Registries.NOISE_SAMPLER_PROVIDER).getOrThrow(samplerKey).value();
+            NoiseCombinerProvider<T> combiner = (NoiseCombinerProvider<T>)registryLookup.getOrThrow(Registries.NOISE_COMBINER_PROVIDER).getOrThrow(combinerKey).value();
             RandomSource random = fork.fromHashOf(id.toString());
-            return new CombinerEntry<>(id, provider, samplerProvider, parameters, provider.getCombiner(random, samplerProvider, parameters));
+            return new CombinerEntry<>(id, combinerKey, samplerKey, parameters, combiner.getCombiner(random, sampler, parameters));
         }
 
         @Override
@@ -139,15 +145,15 @@ public interface NoiseFunction {
 
         @Override
         public int hashCode() {
-            return Objects.hash(id, provider, samplerProvider, parameters);
+            return Objects.hash(id, combinerKey, samplerKey, parameters);
         }
 
         @Override
         public boolean equals(Object obj) {
             return obj instanceof CombinerEntry<?> other
                 && id.equals(other.id)
-                && provider.equals(other.provider)
-                && samplerProvider.equals(other.samplerProvider)
+                && combinerKey.equals(other.combinerKey)
+                && samplerKey.equals(other.samplerKey)
                 && parameters.equals(other.parameters);
         }
     }

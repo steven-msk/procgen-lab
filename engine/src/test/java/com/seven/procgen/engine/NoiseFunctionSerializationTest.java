@@ -9,20 +9,16 @@ import com.seven.procgen.engine.noise.function.NoiseFunctions;
 import com.seven.procgen.engine.noise.graph.NoiseGraph;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.registry.Identifier;
-import com.seven.procgen.engine.registry.Registry;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInstance;
 
 import java.util.Set;
 
-import static com.seven.procgen.engine.NoiseDeterminismTest.tree;
 import static com.seven.procgen.engine.TestNoise.bind;
+import static com.seven.procgen.engine.TestNoise.tree;
 import static com.seven.procgen.engine.noise.function.NoiseFunctions.createSampler;
 import static com.seven.procgen.engine.noise.function.NoiseFunctions.remap01;
 import static org.junit.jupiter.api.Assertions.*;
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class NoiseFunctionSerializationTest {
     static JsonElement encode(NoiseFunction f) {
         return unwrap(NoiseGraph.TREE_CODEC.encodeStart(JsonOps.INSTANCE, f));
@@ -34,11 +30,6 @@ public class NoiseFunctionSerializationTest {
 
     static <T> T unwrap(DataResult<T> r) {
         return r.result().orElseThrow(() -> new IllegalStateException(r.error().map(DataResult.Error::message).orElse("unknown error")));
-    }
-
-    @BeforeAll
-    static void setup() {
-        Registry.bootstrap();
     }
 
     @Test

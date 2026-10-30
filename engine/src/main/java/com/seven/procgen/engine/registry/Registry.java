@@ -66,7 +66,6 @@ public final class Registry<T> implements IndexedIterable<T>, RegistryEntryLooku
 
     private static RegistryEntryLookup.RegistryLookup getBootstrapLookup() {
         if (bootstrapLookup != null) return bootstrapLookup;
-
         return bootstrapLookup = new RegistryEntryLookup.RegistryLookup() {
             @Override
             @SuppressWarnings("unchecked")
@@ -100,6 +99,11 @@ public final class Registry<T> implements IndexedIterable<T>, RegistryEntryLooku
         LOGGER.info("Freezing {} registries", REGISTRIES.size());
         REGISTRIES.freeze();
         REGISTRIES.forEach(Registry::freeze);
+    }
+
+    @Deprecated
+    public static RegistryEntryLookup.RegistryLookup getDefaultLookup() {
+        return getBootstrapLookup();
     }
 
     private Registry(RegistryKey<? extends Registry<T>> registryKey) {

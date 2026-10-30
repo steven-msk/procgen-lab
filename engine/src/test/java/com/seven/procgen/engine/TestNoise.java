@@ -1,19 +1,40 @@
 package com.seven.procgen.engine;
 
+import com.seven.procgen.engine.noise.combiner.FBMCombiner;
 import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
+import com.seven.procgen.engine.noise.combiner.RidgedMultifractalCombiner;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
-import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
-import com.seven.procgen.engine.noise.sampler.PerlinNoise;
 import com.seven.procgen.engine.random.JavaRandomSource;
 import com.seven.procgen.engine.random.RandomFork;
+import com.seven.procgen.engine.registry.Registry;
+import com.seven.procgen.engine.registry.RegistryEntryLookup;
 
 import java.util.Random;
 
+import static com.seven.procgen.engine.noise.combiner.NoiseCombinerType.FBM;
+import static com.seven.procgen.engine.noise.combiner.NoiseCombinerType.RIDGED_MULTIFRACTAL;
+import static com.seven.procgen.engine.noise.function.NoiseFunctions.createCombiner;
+import static com.seven.procgen.engine.noise.function.NoiseFunctions.createSampler;
+import static com.seven.procgen.engine.noise.sampler.NoiseSamplerType.PERLIN;
+
 public final class TestNoise {
-    private static final NoiseSamplerProvider PERLIN = PerlinNoise::new;
     public static final int GRID = 32;
+    private static final RegistryEntryLookup.RegistryLookup REGISTRY_LOOKUP;
 
     private TestNoise() {
+    }
+
+    static NoiseFunction tree() {
+        NoiseFunction base = createSampler("base", PERLIN, 0.1d, 0.1d, 1.0d);
+        NoiseFunction ridged = createCombiner("ridged", RIDGED_MULTIFRACTAL, PERLIN,
+            RidgedMultifractalCombiner.Parameters.of(5, 0.05d, 2.0d, 0.5d, 2.0d, 1.0d));
+        NoiseFunction fbm = createCombiner("fbm", FBM, PERLIN, FBMCombiner.Parameters.of(-2, 1.0d, 1.0d, 1.0d, 1.0d));
+        return base.add(ridged.mul(0.5d)).add(fbm.abs());
+    }
+
+    static {
+        Registry.bootstrap();
+        REGISTRY_LOOKUP = Registry.getDefaultLookup();
     }
 
     public static NoiseFunction bind(NoiseFunction tree, long seed) {
@@ -26,12 +47,12 @@ public final class TestNoise {
 
             @Override
             public NoiseFunction.SamplerEntry visitSampler(NoiseFunction.SamplerEntry sampler) {
-                return sampler.bind(fork);
+                return sampler.bind(fork, REGISTRY_LOOKUP);
             }
 
             @Override
             public <T extends NoiseCombiner.Parameters> NoiseFunction.CombinerEntry<T> visitCombiner(NoiseFunction.CombinerEntry<T> combiner) {
-                return combiner.bind(fork);
+                return combiner.bind(fork, REGISTRY_LOOKUP);
             }
         });
     }

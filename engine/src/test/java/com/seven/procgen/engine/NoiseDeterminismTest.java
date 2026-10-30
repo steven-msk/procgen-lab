@@ -1,7 +1,5 @@
 package com.seven.procgen.engine;
 
-import com.seven.procgen.engine.noise.combiner.FBMCombiner;
-import com.seven.procgen.engine.noise.combiner.RidgedMultifractalCombiner;
 import com.seven.procgen.engine.noise.data.NoiseProbes;
 import com.seven.procgen.engine.noise.data.SampleField;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
@@ -11,22 +9,10 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static com.seven.procgen.engine.TestNoise.*;
-import static com.seven.procgen.engine.noise.combiner.NoiseCombinerType.FBM;
-import static com.seven.procgen.engine.noise.combiner.NoiseCombinerType.RIDGED_MULTIFRACTAL;
-import static com.seven.procgen.engine.noise.function.NoiseFunctions.createCombiner;
-import static com.seven.procgen.engine.noise.function.NoiseFunctions.createSampler;
-import static com.seven.procgen.engine.noise.sampler.NoiseSamplerType.PERLIN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 public class NoiseDeterminismTest {
-    static NoiseFunction tree() {
-        NoiseFunction base = createSampler("base", PERLIN, 0.1d, 0.1d, 1.0d);
-        NoiseFunction ridged = createCombiner("ridged", RIDGED_MULTIFRACTAL, PERLIN,
-            RidgedMultifractalCombiner.Parameters.of(5, 0.05d, 2.0d, 0.5d, 2.0d, 1.0d));
-        NoiseFunction fbm = createCombiner("fbm", FBM, PERLIN, FBMCombiner.Parameters.of(-2, 1.0d, 1.0d, 1.0d, 1.0d));
-        return base.add(ridged.mul(0.5d)).add(fbm.abs());
-    }
 
     @Test
     void bindingTheSameTreeTwiceGivesIdenticalOutput() {

@@ -14,7 +14,7 @@ import static com.seven.procgen.engine.noise.sampler.NoiseSamplerType.PERLIN;
 public class NoiseKeyIdentityTest {
     private static final long SEED = 7L;
     private static final RidgedMultifractalCombiner.Parameters RIDGED_PARAMS = RidgedMultifractalCombiner.Parameters.of(
-            4, 0.05d, 2.0d, 0.5d, 2.0d, 1.0d
+        4, 0.05d, 2.0d, 0.5d, 2.0d, 1.0d
     );
 
     private static NoiseFunction ridged(String id) {
@@ -24,11 +24,11 @@ public class NoiseKeyIdentityTest {
     @Test
     void sameKeyGivesTheSameNoise() {
         Assertions.assertArrayEquals(
-                sampleGrid(bind(createSampler("x", PERLIN), SEED)),
-                sampleGrid(bind(createSampler("x", PERLIN), SEED)));
+            sampleGrid(bind(createSampler("x", PERLIN), SEED)),
+            sampleGrid(bind(createSampler("x", PERLIN), SEED)));
         Assertions.assertArrayEquals(
-                sampleGrid(bind(ridged("x"), SEED)),
-                sampleGrid(bind(ridged("x"), SEED)));
+            sampleGrid(bind(ridged("x"), SEED)),
+            sampleGrid(bind(ridged("x"), SEED)));
     }
 
     @Test
@@ -52,8 +52,8 @@ public class NoiseKeyIdentityTest {
 
         // a is bound before b in one tree and after b in the other
         Assertions.assertArrayEquals(
-                sampleGrid(bind(a.add(b), SEED)),
-                sampleGrid(bind(b.add(a), SEED)));
+            sampleGrid(bind(a.add(b), SEED)),
+            sampleGrid(bind(b.add(a), SEED)));
     }
 
     @Test

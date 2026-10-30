@@ -3,11 +3,14 @@ package com.seven.procgen.engine.noise.combiner;
 import com.mojang.serialization.Codec;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.random.RandomSource;
+import com.seven.procgen.engine.registry.Identifier;
+import com.seven.procgen.engine.registry.Registries;
 import com.seven.procgen.engine.registry.Registry;
+import com.seven.procgen.engine.registry.RegistryKey;
 
 public final class NoiseCombinerType<T extends NoiseCombiner.Parameters> implements NoiseCombinerProvider<T> {
-    public static final NoiseCombinerType<FBMCombiner.Parameters> FBM = register("fbm", FBMCombiner::new, FBMCombiner.Parameters.CODEC);
-    public static final NoiseCombinerType<RidgedMultifractalCombiner.Parameters> RIDGED_MULTIFRACTAL = register("ridged_multifractal", RidgedMultifractalCombiner::new, RidgedMultifractalCombiner.Parameters.CODEC);
+    public static final RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> FBM = register("fbm");
+    public static final RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> RIDGED_MULTIFRACTAL = register("ridged_multifractal");
     private final NoiseCombinerGetter<T> getter;
     private final Codec<T> parametersCodec;
 
@@ -16,12 +19,13 @@ public final class NoiseCombinerType<T extends NoiseCombiner.Parameters> impleme
         this.parametersCodec = parametersCodec;
     }
 
-    private static <T extends NoiseCombiner.Parameters> NoiseCombinerType<T> register(String id, NoiseCombinerGetter<T> getter, Codec<T> parametersCodec) {
-        return Registry.register(Registry.NOISE_COMBINER_PROVIDER, id, new NoiseCombinerType<>(getter, parametersCodec));
+    private static RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> register(String id) {
+        return RegistryKey.of(Registries.NOISE_COMBINER_PROVIDER, Identifier.of(id));
     }
 
-    public static NoiseCombinerProvider<?> init() {
-        return FBM;
+    public static NoiseCombinerProvider<?> init(Registry<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> registry) {
+        Registry.register(registry, RIDGED_MULTIFRACTAL, new NoiseCombinerType<>(RidgedMultifractalCombiner::new, RidgedMultifractalCombiner.Parameters.CODEC));
+        return Registry.register(registry, FBM, new NoiseCombinerType<>(FBMCombiner::new, FBMCombiner.Parameters.CODEC));
     }
 
     @Override

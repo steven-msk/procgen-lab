@@ -1,5 +1,7 @@
 package com.seven.procgen.engine.registry;
 
+import com.mojang.serialization.Codec;
+
 import java.util.Objects;
 
 public final class RegistryKey<T> {
@@ -23,6 +25,10 @@ public final class RegistryKey<T> {
         return of(Registry.ROOT_IDENTIFIER, registry);
     }
 
+    public static <T> Codec<RegistryKey<T>> codec(RegistryKey<? extends Registry<T>> registry) {
+        return Identifier.CODEC.xmap(id -> of(registry, id), RegistryKey::value);
+    }
+
     public Identifier value() {
         return this.value;
     }
@@ -39,8 +45,8 @@ public final class RegistryKey<T> {
     @Override
     public boolean equals(Object obj) {
         return obj instanceof RegistryKey<?> other
-                && other.registry.equals(this.registry)
-                && other.value.equals(this.value);
+            && other.registry.equals(this.registry)
+            && other.value.equals(this.value);
     }
 
     @Override
