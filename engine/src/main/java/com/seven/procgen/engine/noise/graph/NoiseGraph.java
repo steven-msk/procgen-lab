@@ -1,4 +1,4 @@
-package com.seven.procgen.engine.noise;
+package com.seven.procgen.engine.noise.graph;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
@@ -18,6 +18,9 @@ public record NoiseGraph(Map<Identifier, NoiseFunction> definitions, NoiseFuncti
         NoiseFunction.CODEC.fieldOf("root").forGetter(NoiseGraph::root)
     ).apply(i, (format, definitions, root) -> new NoiseGraph(definitions, root)));
     public static final Codec<NoiseFunction> TREE_CODEC = CODEC.flatXmap(NoiseGraph::resolve, tree -> DataResult.success(NoiseGraph.of(tree)));
+    private static final String[] LERP_ROLES = {"from", "to", "t"};
+    private static final String[] BINARY_ROLES = {"a", "b"};
+    private static final String[] INPUT_ROLES = {"input"};
 
     public NoiseGraph {
         definitions = Collections.unmodifiableMap(new LinkedHashMap<>(definitions));
@@ -34,6 +37,39 @@ public record NoiseGraph(Map<Identifier, NoiseFunction> definitions, NoiseFuncti
             String m = e.getMessage();
             return DataResult.error(() -> m);
         }
+    }
+
+    /// Direct children in the order mapChildren visits them
+    public static List<ChildNode> childrenOf(NoiseFunction function) {
+        List<NoiseFunction> found = new ArrayList<>(3);
+        function.mapChildren(c -> {
+            found.add(c);
+            return c;
+        });
+        String[] roles = function instanceof NoiseFunctions.Lerp ? LERP_ROLES
+            : function instanceof NoiseFunctions.BinaryFunction ? BINARY_ROLES
+            : INPUT_ROLES;
+        List<ChildNode> children = new ArrayList<>(found.size());
+        for (int i = 0; i < found.size(); i++) {
+            children.add(new ChildNode(i < roles.length ? roles[i] : "#" + i, found.get(i)));
+        }
+        return children;
+    }
+
+    public static String labelOf(NoiseFunction function) {
+        return switch (function) {
+            case NoiseFunctions.Sampler s -> s.samplerEntry() + " (Sampler)";
+            case NoiseFunctions.Combiner<?> c -> c.combinerEntry() + " (Combiner)";
+            case NoiseFunctions.Constant k -> k.value() + " (Constant)";
+            case NoiseFunctions.UnaryFunction u -> u.operation().name();
+            case NoiseFunctions.BinaryFunction b -> b.operation().name();
+            case NoiseFunctions.Clamp c -> "Clamp [" + c.min() + ", " + c.max() + "]";
+            case NoiseFunctions.Lerp l -> "Lerp";
+            case NoiseFunctions.Affine a -> a.scale() == 0.5d && a.bias() == 0.5d
+                ? "Remap01 [-1,1] -> [0,1]"
+                : "Affine scale=" + a.scale() + " bias=" + a.bias();
+            default -> function.getClass().getSimpleName();
+        };
     }
 
     private static final class Hoister {
@@ -113,5 +149,8 @@ public record NoiseGraph(Map<Identifier, NoiseFunction> definitions, NoiseFuncti
             done.put(id, resolved);
             return resolved;
         }
+    }
+
+    public record ChildNode(String role, NoiseFunction node) {
     }
 }

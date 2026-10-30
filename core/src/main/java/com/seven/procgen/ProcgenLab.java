@@ -5,21 +5,18 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.mojang.serialization.JsonOps;
 import com.seven.procgen.engine.logging.LogUtil;
-import com.seven.procgen.engine.noise.NoiseField;
-import com.seven.procgen.engine.noise.NoiseGraph;
-import com.seven.procgen.engine.noise.NoiseState;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerType;
 import com.seven.procgen.engine.noise.combiner.RidgedMultifractalCombiner;
+import com.seven.procgen.engine.noise.data.NoiseField;
+import com.seven.procgen.engine.noise.data.NoiseState;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.registry.Registry;
 import com.seven.procgen.engine.util.color.ColorRamp;
-import com.seven.procgen.render.PixmapPreviewRenderer;
-import imgui.ImGui;
+import com.seven.procgen.render.NodeImage;
+import com.seven.procgen.render.NoiseImageRenderer;
+import com.seven.procgen.render.NoiseTreeImage;
 import org.slf4j.Logger;
 
 import static com.seven.procgen.engine.noise.function.NoiseFunctions.*;
@@ -32,8 +29,10 @@ public class ProcgenLab extends ApplicationAdapter {
     private static ProcgenLab instance;
     private final ApplicationConfig config;
     private final ImGuiContextHandle imGuiContextHandle;
-    private PixmapPreviewRenderer preview;
+    private NoiseImageRenderer renderer;
     private NoiseField field;
+    private static final int NODE_IMAGE_SIZE = 128;
+    private NoiseTreeImage treeImage;
     private ColorRamp ramp = ColorRamp.TERRAIN;
     private boolean autoRange = false;
     private boolean highlight = true;
@@ -56,7 +55,7 @@ public class ProcgenLab extends ApplicationAdapter {
         NoiseFunction a = mountains.add(detail.mul(0.2d));
 
         NoiseFunction mask = createSampler("mask", NoiseSamplerType.PERLIN, 0.005d, 0.005d, 1.0d);
-        NoiseFunction b = lerp(remap01(plains), a.add(mountains), remap01(mask));
+        NoiseFunction b = lerp(remap01(plains), a, remap01(mask));
         return b;
     }
 
@@ -69,23 +68,19 @@ public class ProcgenLab extends ApplicationAdapter {
         long seed = 0L;
 
         NoiseFunction noise = tree().mapAll(new NoiseState(seed));
-        noise.mapAll(new NoiseFunction.Visitor() {
-            @Override
-            public NoiseFunction apply(NoiseFunction input) {
-                LOGGER.info("function: {}", input);
-                return input;
-            }
-        });
-        JsonElement json = NoiseGraph.TREE_CODEC.encodeStart(JsonOps.INSTANCE, noise).result().orElseThrow();
-        LOGGER.info(new GsonBuilder().setPrettyPrinting().create().toJson(json));
         this.field = NoiseField.sample(noise, size, size, 0.0d, 0.0d, 1.0d);
-        this.preview = new PixmapPreviewRenderer();
+        this.renderer = new NoiseImageRenderer();
+        this.treeImage = new NoiseTreeImage(noise, new NoiseTreeImage.SamplerContext(NODE_IMAGE_SIZE, 0.0d, 0.0d, (double)size / NODE_IMAGE_SIZE), currentConfig());
         refresh();
     }
 
+    private NodeImage.Config currentConfig() {
+        return new NodeImage.Config(ramp, autoRange, -1.0d, 1.0d, highlight);
+    }
+
     private void refresh() {
-        if (autoRange) preview.updateAutoRange(field, ramp);
-        else preview.update(field, ramp, -1.0d, 1.0d, highlight);
+        if (autoRange) renderer.updateAutoRange(field, ramp);
+        else renderer.update(field, ramp, -1.0d, 1.0d, highlight);
     }
 
     @Override
@@ -117,21 +112,26 @@ public class ProcgenLab extends ApplicationAdapter {
             LOGGER.info("highlight set to {}", highlight);
             changed = true;
         }
-        if (changed) refresh();
+        if (changed) {
+            refresh();
+            treeImage.setImageConfig(currentConfig());
+        }
 
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1f);
         batch.begin();
-        batch.draw(preview.texture(), 20, 20, 512, 512);
+        batch.draw(renderer.texture(), 20, 20, 512, 512);
         batch.end();
 
         imGuiContextHandle.start();
-        ImGui.button("Button");
+        treeImage.draw();
         imGuiContextHandle.end();
     }
 
     @Override
     public void dispose() {
         imGuiContextHandle.dispose();
+        treeImage.dispose();
+        renderer.dispose();
         this.batch.dispose();
     }
 

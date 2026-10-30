@@ -3,12 +3,12 @@ package com.seven.procgen.render;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.utils.Disposable;
-import com.seven.procgen.engine.noise.NoiseField;
+import com.seven.procgen.engine.noise.data.NoiseField;
 import com.seven.procgen.engine.util.color.ColorRamp;
 import org.jspecify.annotations.Nullable;
 
 /// Owns the Pixmap/Texture and repaints them from a NoiseField.
-public class PixmapPreviewRenderer implements Disposable {
+public class NoiseImageRenderer implements Disposable {
     /// RGBA8888 markers used when highlighting range problems.
     public static final int BELOW_RANGE = 0x00ffffff; // cyan
     public static final int ABOVE_RANGE = 0xff00ffff; // magenta

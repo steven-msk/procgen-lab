@@ -16,22 +16,24 @@ public final class ColorRamp {
 
     /// Blue-white-red. For signed noise: the midpoint (value 0) is white.
     public static final ColorRamp DIVERGING = new ColorRamp(
-            stop(0.0f, 0x2b4c9b),
-            stop(0.5f, 0xf5f5f5),
-            stop(1.0f, 0xb2182b));
+        stop(0.0f, 0x2b4c9b),
+        stop(0.5f, 0xf5f5f5),
+        stop(1.0f, 0xb2182b)
+    );
 
     /// Assumes input in [-1, 1] mapped to [0, 1], so sea level is at t = 0.5 (noise value 0).
     public static final ColorRamp TERRAIN = new ColorRamp(
-            stop(0.00f, 0x0a2350),  // deep water
-            stop(0.42f, 0x1c5a9e),
-            stop(0.50f, 0x3d8fcf),  // shallows
-            stop(0.50f, 0xe3d49a),  // beach (hard edge at the coast)
-            stop(0.54f, 0xcdb97a),
-            stop(0.57f, 0x6fae4f),  // grass
-            stop(0.70f, 0x3f7f3a),  // forest
-            stop(0.82f, 0x7a6a58),  // rock
-            stop(0.92f, 0xb8b0a8),
-            stop(1.00f, 0xffffff)); // snow
+        stop(0.00f, 0x0a2350),  // deep water
+        stop(0.42f, 0x1c5a9e),
+        stop(0.50f, 0x3d8fcf),  // shallows
+        stop(0.50f, 0xe3d49a),  // beach (hard edge at the coast)
+        stop(0.54f, 0xcdb97a),
+        stop(0.57f, 0x6fae4f),  // grass
+        stop(0.70f, 0x3f7f3a),  // forest
+        stop(0.82f, 0x7a6a58),  // rock
+        stop(0.92f, 0xb8b0a8),
+        stop(1.00f, 0xffffff)  // snow
+    );
 
     private final int[] lut = new int[LUT_SIZE];
 
@@ -78,16 +80,10 @@ public final class ColorRamp {
         if (i == n - 1) return pack(r[i], g[i], b[i]);
 
         float f = (t - pos[i]) / (pos[i + 1] - pos[i]); // span > 0: pos[i + 1] > t >= pos[i]
-        return pack(
-                r[i] + (r[i + 1] - r[i]) * f,
-                g[i] + (g[i + 1] - g[i]) * f,
-                b[i] + (b[i + 1] - b[i]) * f);
+        return pack(r[i] + (r[i + 1] - r[i]) * f, g[i] + (g[i + 1] - g[i]) * f, b[i] + (b[i + 1] - b[i]) * f);
     }
 
     private static int pack(float r, float g, float b) {
-        return (Math.round(r * 255.0f) << 24)
-                | (Math.round(g * 255.0f) << 16)
-                | (Math.round(b * 255.0f) << 8)
-                | 0xff;
+        return (Math.round(r * 255.0f) << 24) | (Math.round(g * 255.0f) << 16) | (Math.round(b * 255.0f) << 8) | 0xff;
     }
 }

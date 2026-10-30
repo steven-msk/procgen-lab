@@ -1,4 +1,4 @@
-package com.seven.procgen.engine.noise;
+package com.seven.procgen.engine.noise.data;
 
 import com.seven.procgen.engine.noise.function.NoiseFunction;
 

@@ -1,4 +1,4 @@
-package com.seven.procgen.engine.noise;
+package com.seven.procgen.engine.noise.data;
 
 import com.google.common.collect.Maps;
 import com.seven.procgen.engine.noise.combiner.NoiseCombiner;

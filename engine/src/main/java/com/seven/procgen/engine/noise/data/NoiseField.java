@@ -1,4 +1,4 @@
-package com.seven.procgen.engine.noise;
+package com.seven.procgen.engine.noise.data;
 
 import com.seven.procgen.engine.noise.function.NoiseFunction;
 
@@ -72,5 +72,35 @@ public class NoiseField {
 
     public int nonFiniteCount() {
         return nonFiniteCount;
+    }
+
+    public record Stats(double min, double max, double mean, double stdDeviation, int nonFinite) {
+        public static Stats of(NoiseField field) {
+            double min = Double.POSITIVE_INFINITY;
+            double max = Double.NEGATIVE_INFINITY;
+            double mean = 0.0d;
+            double m2 = 0.0d; // Welford
+            int n = 0;
+            int bad = 0;
+
+            for (int y = 0; y < field.height(); y++) {
+                for (int x = 0; x < field.width(); x++) {
+                    double v = field.get(x, y);
+                    if (!Double.isFinite(v)) {
+                        bad++;
+                        continue;
+                    }
+                    n++;
+                    min = Math.min(min, v);
+                    max = Math.max(max, v);
+                    double d = v - mean;
+                    mean += d / n;
+                    m2 += d * (v - mean);
+                }
+            }
+            return n == 0
+                ? new Stats(Double.NaN, Double.NaN, Double.NaN, Double.NaN, bad)
+                : new Stats(min, max, mean, Math.sqrt(m2 / n), bad);
+        }
     }
 }
