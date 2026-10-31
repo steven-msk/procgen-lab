@@ -21,6 +21,8 @@ public record NoiseGraph(Map<Identifier, NoiseFunction> definitions, NoiseFuncti
     private static final String[] LERP_ROLES = {"from", "to", "t"};
     private static final String[] BINARY_ROLES = {"a", "b"};
     private static final String[] INPUT_ROLES = {"input"};
+    private static final String[] DOMAIN_WARP_ROLES = {"input", "offsetX", "offsetY"};
+    private static final String[] SELECT_ROLES = {"selector", "above", "below"};
 
     public NoiseGraph {
         definitions = Collections.unmodifiableMap(new LinkedHashMap<>(definitions));
@@ -48,6 +50,8 @@ public record NoiseGraph(Map<Identifier, NoiseFunction> definitions, NoiseFuncti
         });
         String[] roles = function instanceof NoiseFunctions.Lerp ? LERP_ROLES
             : function instanceof NoiseFunctions.BinaryFunction ? BINARY_ROLES
+            : function instanceof NoiseFunctions.DomainWarp ? DOMAIN_WARP_ROLES
+            : function instanceof NoiseFunctions.Select ? SELECT_ROLES
             : INPUT_ROLES;
         List<ChildNode> children = new ArrayList<>(found.size());
         for (int i = 0; i < found.size(); i++) {
@@ -67,7 +71,23 @@ public record NoiseGraph(Map<Identifier, NoiseFunction> definitions, NoiseFuncti
             case NoiseFunctions.Lerp l -> "Lerp";
             case NoiseFunctions.Affine a -> a.scale() == 0.5d && a.bias() == 0.5d
                 ? "Remap01 [-1,1] -> [0,1]"
-                : "Affine scale=" + a.scale() + " bias=" + a.bias();
+                : String.format("Affine output * %s + %s", a.scale(), a.bias());
+            case NoiseFunctions.Reference r -> r.id() + " (Reference)";
+            case NoiseFunctions.Scale s -> String.format("Scale x*%s y*%s, z*%s", s.x(), s.y(), s.z());
+            case NoiseFunctions.Offset o -> String.format("Offset x+%s y+%s z+%s", o.dx(), o.dy(), o.dz());
+            case NoiseFunctions.Rotate r ->
+                String.format("Rotate %s deg (px=%s py=%s)", r.degrees(), r.pivotX(), r.pivotY());
+            case NoiseFunctions.DomainWarp w -> "Domain warp (amp=" + w.amplitude() + ")";
+            case NoiseFunctions.Gradient g ->
+                String.format("Gradient %s, %s -> %s : %s -> %s", g.axis(), g.from(), g.to(), g.fromValue(), g.toValue());
+            case NoiseFunctions.RadialGradient g ->
+                String.format("Radial gradient (%s, %s), %s -> %s, %s -> %s", g.centerX(), g.centerX(), g.innerRadius(), g.outerRadius(), g.innerValue(), g.outerValue());
+            case NoiseFunctions.Terrace t ->
+                String.format("Terrace %s levels %s smoothness", t.levels(), t.smoothness());
+            case NoiseFunctions.CurveRemap c -> "Curve remap";
+            case NoiseFunctions.Select s -> "Select " + (s.edge() == 0.0d
+                ? String.valueOf(s.threshold())
+                : String.format("[%s - %s, %s + %s]", s.threshold(), s.edge(), s.threshold(), s.edge()));
             default -> function.getClass().getSimpleName();
         };
     }

@@ -13,6 +13,15 @@ public final class NoiseFunctionTypes {
         register(registry, "lerp", NoiseFunctions.Lerp.CODEC);
         register(registry, "affine", NoiseFunctions.Affine.CODEC);
         register(registry, "reference", NoiseFunctions.Reference.CODEC);
+        register(registry, "scale", NoiseFunctions.Scale.CODEC);
+        register(registry, "offset", NoiseFunctions.Offset.CODEC);
+        register(registry, "rotate", NoiseFunctions.Rotate.CODEC);
+        register(registry, "domain_warp", NoiseFunctions.DomainWarp.CODEC);
+        register(registry, "gradient", NoiseFunctions.Gradient.CODEC);
+        register(registry, "radial_gradient", NoiseFunctions.RadialGradient.CODEC);
+        register(registry, "terrace", NoiseFunctions.Terrace.CODEC);
+        register(registry, "curve_remap", NoiseFunctions.CurveRemap.CODEC);
+        register(registry, "select", NoiseFunctions.Select.CODEC);
         return register(registry, "constant", NoiseFunctions.Constant.CODEC);
     }
 
