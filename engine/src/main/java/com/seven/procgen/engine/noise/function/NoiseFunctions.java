@@ -1,6 +1,7 @@
 package com.seven.procgen.engine.noise.function;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
@@ -9,9 +10,13 @@ import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.registry.Identifier;
 import com.seven.procgen.engine.registry.Registry;
 import com.seven.procgen.engine.registry.RegistryKey;
+import com.seven.procgen.engine.util.math.Axis;
+import com.seven.procgen.engine.util.math.Maths;
 import com.seven.procgen.engine.util.serialization.Codecs;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
+import java.util.List;
 import java.util.function.DoubleBinaryOperator;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.UnaryOperator;
@@ -583,6 +588,266 @@ public final class NoiseFunctions {
             NoiseFunction n2 = function.apply(offsetY);
             return n0 == input && n1 == offsetX && n2 == offsetY ? this : new DomainWarp(n0, n1, n2, amplitude);
 
+        }
+    }
+
+    /// Clamped linear ramp along one axis: fromValue at `from`, toValue at `to`, held flat outside.
+    /// Defaults to the usual noise range (-1..1). from > to gives a descending ramp.
+    public record Gradient(Axis axis, double from, double to, double fromValue, double toValue) implements NoiseFunction {
+        public static final MapCodec<Gradient> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Axis.CODEC.fieldOf("axis").forGetter(Gradient::axis),
+            Codec.DOUBLE.fieldOf("from").forGetter(Gradient::from),
+            Codec.DOUBLE.fieldOf("to").forGetter(Gradient::to),
+            Codec.DOUBLE.optionalFieldOf("from_value", -1.0d).forGetter(Gradient::fromValue),
+            Codec.DOUBLE.optionalFieldOf("to_value", 1.0d).forGetter(Gradient::toValue)
+        ).apply(i, Gradient::new));
+
+        @Override
+        public double compute(Context context) {
+            double v = axis.pick(context.x(), context.y(), context.z());
+            double t = to == from ? (v < from ? 0.0d : 1.0d) : Maths.clamp01((v - from) / (to - from));
+            return fromValue + (toValue - fromValue) * t;
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return null;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(this);
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            return this;
+        }
+    }
+
+    /// Distance-from-center ramp in the XY plane. innerValue inside innerRadius, outerValue beyond outerRadius.
+    /// You can multiply or subtract it with a noise to get island masks.
+    public record RadialGradient(double centerX, double centerY, double innerRadius, double outerRadius, double innerValue, double outerValue) implements NoiseFunction {
+        public static final MapCodec<RadialGradient> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Codec.DOUBLE.optionalFieldOf("center_x", 0.0d).forGetter(RadialGradient::centerX),
+            Codec.DOUBLE.optionalFieldOf("center_y", 0.0d).forGetter(RadialGradient::centerY),
+            Codec.DOUBLE.fieldOf("inner_radius").forGetter(RadialGradient::innerRadius),
+            Codec.DOUBLE.fieldOf("outer_radius").forGetter(RadialGradient::outerRadius),
+            Codec.DOUBLE.optionalFieldOf("inner_value", -1.0d).forGetter(RadialGradient::innerValue),
+            Codec.DOUBLE.optionalFieldOf("outer_value", 0.0d).forGetter(RadialGradient::outerValue)
+        ).apply(i, RadialGradient::new));
+
+        @Override
+        public double compute(Context context) {
+            double dx = context.x() - centerX;
+            double dy = context.y() - centerY;
+            double d = Math.sqrt(dx * dx + dy * dy);
+            double t = outerRadius == innerRadius
+                ? (d < innerRadius ? 0.0d : 1.0d)
+                : Maths.clamp01((d - innerRadius) / (outerRadius - innerRadius));
+            return innerValue + (outerValue - innerValue) * t;
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(this);
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            return this;
+        }
+    }
+
+    /// Quantizes a 0..1 input into `levels` plateaus (feed it through remap01 first).
+    /// smoothness 0 = hard steps; larger values round the risers (smoothstep over the top `smoothness`
+    /// fraction of each level). Output stays in 0..1 and is continuous when smoothness > 0.
+    public record Terrace(NoiseFunction input, int levels, double smoothness) implements NoiseFunction {
+        public static final MapCodec<Terrace> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(Terrace::input),
+            Codec.intRange(2, 1024).fieldOf("levels").forGetter(Terrace::levels),
+            Codec.doubleRange(0.0d, 1.0d).optionalFieldOf("smoothness", 0.25d).forGetter(Terrace::smoothness)
+        ).apply(i, Terrace::new));
+
+        @Override
+        public double compute(Context context) {
+            double t = input.compute(context) * levels;
+            double base = Math.floor(t);
+            double ramp = 0.0d;
+            if (smoothness > 0.0d) {
+                double frac = t - base;
+                ramp = Maths.smoothstep(Maths.clamp01((frac - (1.0d - smoothness)) / smoothness));
+            }
+            return (base + ramp) / levels;
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Terrace(input.mapAll(visitor), levels, smoothness));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            return n0 == input ? this : new Terrace(n0, levels, smoothness);
+        }
+    }
+
+    /// Spline remap through user-placed points (in -> out), cubic Hermite with Fritsch-Butland slopes,
+    /// so the curve is smooth and never overshoots between points (a monotone input gives a monotone output).
+    /// Values outside the first/last `in` are held at the end points' `out`.
+    /// Slopes are computed per call from the two neighboring segments: no hidden arrays, so the record
+    /// keeps structural equals/hashCode for node dedup.
+    public record CurveRemap(NoiseFunction input, List<Point> points) implements NoiseFunction {
+        public static final MapCodec<CurveRemap> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(CurveRemap::input),
+            Point.CODEC.listOf().validate(list -> {
+                String problem = findProblem(list);
+                return problem == null ? DataResult.success(list) : DataResult.error(() -> problem);
+            }).fieldOf("points").forGetter(CurveRemap::points)
+        ).apply(i, CurveRemap::new));
+
+        public record Point(double in, double out) {
+            public static final Codec<Point> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.DOUBLE.fieldOf("in").forGetter(Point::in),
+                Codec.DOUBLE.fieldOf("out").forGetter(Point::out)
+            ).apply(i, Point::new));
+        }
+
+        public CurveRemap {
+            String problem = findProblem(points);
+            if (problem != null) throw new IllegalArgumentException(problem);
+            points = List.copyOf(points);
+        }
+
+        private static @Nullable String findProblem(List<Point> points) {
+            if (points.size() < 2) return "curve needs at least 2 points";
+            for (int k = 1; k < points.size(); k++) {
+                if (!(points.get(k).in() > points.get(k - 1).in())) {
+                    return "curve points need strictly increasing 'in' values";
+                }
+            }
+            return null;
+        }
+
+        private double delta(int k) {
+            Point a = points.get(k);
+            Point b = points.get(k + 1);
+            return (b.out() - a.out()) / (b.in() - a.in());
+        }
+
+        private double slope(int k) {
+            int size = points.size();
+            if (k == 0) return delta(0);
+            if (k == size - 1) return delta(size - 2);
+            double d0 = delta(k - 1);
+            double d1 = delta(k);
+            if (d0 * d1 <= 0.0d) return 0.0d; // local extremum or flat: keep it flat
+            double h0 = points.get(k).in() - points.get(k - 1).in();
+            double h1 = points.get(k + 1).in() - points.get(k).in();
+            double w1 = 2.0d * h1 + h0;
+            double w2 = h1 + 2.0d * h0;
+            return (w1 + w2) / (w1 / d0 + w2 / d1);
+        }
+
+        @Override
+        public double compute(Context context) {
+            double v = input.compute(context);
+            int size = points.size();
+            Point first = points.getFirst();
+            Point last = points.getLast();
+            if (v <= first.in()) return first.out();
+            if (v >= last.in()) return last.out();
+
+            int lo = 0;
+            int hi = size - 1;
+            while (hi - lo > 1) {
+                int mid = (lo + hi) >>> 1;
+                if (points.get(mid).in() <= v) lo = mid;
+                else hi = mid;
+            }
+
+            Point a = points.get(lo);
+            Point b = points.get(lo + 1);
+            double h = b.in() - a.in();
+            double t = (v - a.in()) / h;
+            double t2 = t * t;
+            double t3 = t2 * t;
+            return (2 * t3 - 3 * t2 + 1) * a.out()
+                + (t3 - 2 * t2 + t) * h * slope(lo)
+                + (-2 * t3 + 3 * t2) * b.out()
+                + (t3 - t2) * h * slope(lo + 1);
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new CurveRemap(input.mapAll(visitor), points));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            return n0 == input ? this : new CurveRemap(n0, points);
+        }
+    }
+
+    /// Picks between two branches by comparing `selector` with `threshold`.
+    /// edge = 0: hard switch, only the chosen branch is evaluated.
+    /// edge > 0: smoothstep crossfade over [threshold - edge, threshold + edge]; both branches are only
+    /// evaluated for pixels inside that band.
+    public record Select(NoiseFunction selector, double threshold, double edge, NoiseFunction above, NoiseFunction below) implements NoiseFunction {
+        public static final MapCodec<Select> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("selector").forGetter(Select::selector),
+            Codec.DOUBLE.fieldOf("threshold").forGetter(Select::threshold),
+            Codec.doubleRange(0.0d, Double.MAX_VALUE).optionalFieldOf("edge", 0.0d).forGetter(Select::edge),
+            NoiseFunction.CODEC.fieldOf("above").forGetter(Select::above),
+            NoiseFunction.CODEC.fieldOf("below").forGetter(Select::below)
+        ).apply(i, Select::new));
+
+        @Override
+        public double compute(Context context) {
+            double s = selector.compute(context);
+            double t = edge <= 0.0d
+                ? (s >= threshold ? 1.0d : 0.0d)
+                : Maths.smoothstep(Maths.clamp01((s - (threshold - edge)) / (2.0d * edge)));
+            if (t < 0.0d) return below.compute(context);
+            if (t >= 1.0d) return above.compute(context);
+            double b = below.compute(context);
+            double a = above.compute(context);
+            return b + (a - b) * t;
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Select(selector.mapAll(visitor), threshold, edge, above.mapAll(visitor), below.mapAll(visitor)));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(selector);
+            NoiseFunction n1 = function.apply(above);
+            NoiseFunction n2 = function.apply(below);
+            return n0 == selector && n1 == above && n2 == below ? this : new Select(n0, threshold, edge, n1, n2);
         }
     }
 
