@@ -25,19 +25,18 @@ public final class NoiseSamplerType<T> implements NoiseSamplerProvider<T> {
     }
 
     public static NoiseSamplerProvider<?> init(Registry<NoiseSamplerProvider<?>> registry) {
-        Registry.register(registry, WHITE, parameterless(WhiteNoise::new));
         Registry.register(registry, PERLIN, parameterless(PerlinNoise::new));
         Registry.register(registry, VALUE, parameterless(ValueNoise::new));
-        return Registry.register(registry, SIMPLEX, parameterless(SimplexNoise::new));
-//        return Registry.register(registry, WORLEY,
-//            new NoiseSamplerType<>(WorleyNoise::new, WorleyNoise.Parameters.CODEC, WorleyNoise.Parameters.DEFAULT));
+        Registry.register(registry, SIMPLEX, parameterless(SimplexNoise::new));
+        Registry.register(registry, WORLEY, parametrized(WorleyNoise::new, WorleyNoise.Parameters.CODEC, WorleyNoise.Parameters.DEFAULT));
+        return Registry.register(registry, WHITE, parameterless(WhiteNoise::new));
     }
 
     private static NoiseSamplerType<Unit> parameterless(LongFunction<NoiseSampler> factory) {
         return new NoiseSamplerType<>((seed, unit) -> factory.apply(seed), Codec.unit(Unit.INSTANCE), Unit.INSTANCE);
     }
 
-    private static <T> NoiseSamplerType<T> parametized(BiFunction<Long, T, NoiseSampler> factory, Codec<T> parametersCodec, T defaultParameters) {
+    private static <T> NoiseSamplerType<T> parametrized(BiFunction<Long, T, NoiseSampler> factory, Codec<T> parametersCodec, T defaultParameters) {
         return new NoiseSamplerType<>(factory, parametersCodec, defaultParameters);
     }
 
