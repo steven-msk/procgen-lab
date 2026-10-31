@@ -74,7 +74,7 @@ public class ProcgenLab extends ApplicationAdapter {
         NoiseFunction noise = tree().mapAll(new NoiseState(seed, Registry.getDefaultLookup()));
         this.field = SampleField.sampleFunction(noise, size, size, 0.0d, 0.0d, 1.0d);
         this.renderer = new NoiseImageRenderer();
-        this.treeImage = new NoiseTreeImage(noise, new NoiseTreeImage.SamplerContext(NODE_IMAGE_SIZE, 0.0d, 0.0d, (double)size / NODE_IMAGE_SIZE), currentConfig());
+        this.treeImage = new NoiseTreeImage(noise, new NoiseTreeImage.SamplerState(NODE_IMAGE_SIZE, 0.0d, 0.0d, (double)size / NODE_IMAGE_SIZE), currentConfig());
         refresh();
 
         JsonElement json = NoiseGraph.TREE_CODEC.encodeStart(JsonOps.INSTANCE, noise).getOrThrow();

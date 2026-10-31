@@ -17,15 +17,15 @@ import java.util.Map;
 /// record equality, which ignores the bound sampler instances.
 public class NoiseTreeImage implements Disposable {
     private static final float IMAGE_SIZE = 128.0f;
-    private final SamplerContext samplerContext;
+    private final SamplerState samplerState;
     private final Map<NoiseFunction, NodeImage> images = new HashMap<>();
     private final Node root;
     private NodeImage.Config config;
     private int viewVersion;
     private int nextId;
 
-    public NoiseTreeImage(NoiseFunction boundRoot, SamplerContext context, NodeImage.Config config) {
-        this.samplerContext = context;
+    public NoiseTreeImage(NoiseFunction boundRoot, SamplerState context, NodeImage.Config config) {
+        this.samplerState = context;
         this.config = config;
         Map<NoiseFunction, SampleField> fields = NoiseProbes.sampleAll(
             boundRoot, context.size(), context.size(), context.originX(), context.originY(), context.step()
@@ -57,7 +57,7 @@ public class NoiseTreeImage implements Disposable {
 //        int flags = ImGuiTreeNodeFlags.DefaultOpen | (node.children().isEmpty() ? ImGuiTreeNodeFlags.Leaf : 0);
         int flags = ImGuiTreeNodeFlags.DefaultOpen;
         if (ImGui.treeNodeEx(node.role() + ": " + node.label(), flags)) {
-            node.image().update(samplerContext, config, viewVersion); // lazy: only sampled when actually visible
+            node.image().update(samplerState, config, viewVersion); // lazy: only sampled when actually visible
             node.image().draw(IMAGE_SIZE);
             node.children.forEach(this::drawNode);
             ImGui.treePop();
@@ -74,6 +74,6 @@ public class NoiseTreeImage implements Disposable {
     private record Node(int id, String role, String label, NodeImage image, List<Node> children) {
     }
 
-    public record SamplerContext(int size, double originX, double originY, double step) {
+    public record SamplerState(int size, double originX, double originY, double step) {
     }
 }

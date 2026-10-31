@@ -98,6 +98,26 @@ public final class NoiseFunctions {
         return new Lerp(a, b, t);
     }
 
+    public static NoiseFunction scale(NoiseFunction f, double xScale, double yScale, double zScale) {
+        return new Scale(f, xScale, yScale, zScale);
+    }
+
+    public static NoiseFunction scale(NoiseFunction f, double factor) {
+        return Scale.uniform(f, factor);
+    }
+
+    public static NoiseFunction offset(NoiseFunction f, double offsetX, double offsetY, double offsetZ) {
+        return new Offset(f, offsetX, offsetY, offsetZ);
+    }
+
+    public static NoiseFunction rotate(NoiseFunction f, double degrees, double pivotX, double pivotY) {
+        return new Rotate(f, degrees, pivotX, pivotY);
+    }
+
+    public static NoiseFunction warp(NoiseFunction f, NoiseFunction offsetX, NoiseFunction offsetY, double amplitude) {
+        return new DomainWarp(f, offsetX, offsetY, amplitude);
+    }
+
     public record Sampler(NoiseFunction.SamplerEntry samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
         public static final MapCodec<Sampler> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             Identifier.CODEC.fieldOf("id").forGetter(n -> n.samplerEntry().id()),
@@ -411,6 +431,158 @@ public final class NoiseFunctions {
         @Override
         public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
             return this;
+        }
+    }
+
+    // Multiplies the sampling coordinates per axis. Basically a frequency multiplier, e.g 2 = features half as large
+    public record Scale(NoiseFunction input, double x, double y, double z) implements NoiseFunction {
+        public static final MapCodec<Scale> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(Scale::input),
+            Codec.DOUBLE.fieldOf("x").forGetter(Scale::x),
+            Codec.DOUBLE.fieldOf("y").forGetter(Scale::y),
+            Codec.DOUBLE.optionalFieldOf("z", 1.0d).forGetter(Scale::z)
+        ).apply(i, Scale::new));
+
+        public static Scale uniform(NoiseFunction input, double factor) {
+            return new Scale(input, factor, factor, factor);
+        }
+
+        @Override
+        public double compute(Context context) {
+            return input.compute(new SinglePointContext(context.x() * x, context.y() * y, context.z() * z));
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Scale(input.mapAll(visitor), x, y, z));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            return n0 == input ? this : new Scale(n0, x, y, z);
+        }
+    }
+
+    /// Adds a constant to the sampling coordinates
+    public record Offset(NoiseFunction input, double dx, double dy, double dz) implements NoiseFunction {
+        public static final MapCodec<Offset> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(Offset::input),
+            Codec.DOUBLE.optionalFieldOf("dx", 0.0d).forGetter(Offset::dx),
+            Codec.DOUBLE.optionalFieldOf("dy", 0.0d).forGetter(Offset::dy),
+            Codec.DOUBLE.optionalFieldOf("dz", 0.0d).forGetter(Offset::dz)
+        ).apply(i, Offset::new));
+
+        @Override
+        public double compute(Context context) {
+            return input.compute(new SinglePointContext(context.x() + dx, context.y() + dy, context.z() + dz));
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Offset(input.mapAll(visitor), dx, dy, dz));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            return n0 == input ? this : new Offset(n0, dx, dy, dz);
+        }
+    }
+
+    public record Rotate(NoiseFunction input, double degrees, double pivotX, double pivotY, double cos, double sin) implements NoiseFunction {
+        public static final MapCodec<Rotate> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(Rotate::input),
+            Codec.DOUBLE.fieldOf("degrees").forGetter(Rotate::degrees),
+            Codec.DOUBLE.optionalFieldOf("pivot_x", 0.0d).forGetter(Rotate::pivotX),
+            Codec.DOUBLE.optionalFieldOf("pivot_y", 0.0d).forGetter(Rotate::pivotY)
+        ).apply(i, Rotate::new));
+
+        public Rotate {
+            double radians = Math.toRadians(degrees);
+            cos = Math.cos(radians);
+            sin = Math.sin(radians);
+        }
+
+        public Rotate(NoiseFunction input, double degrees, double pivotX, double pivotY) {
+            this(input, degrees, pivotX, pivotY, 0.0d, 0.0d); // cos/sin are overwritten by compact ctor
+        }
+
+        @Override
+        public double compute(Context context) {
+            double dx = context.x() - pivotX;
+            double dy = context.y() - pivotY;
+            return input.compute(new SinglePointContext(
+                pivotX + dx * cos - dy * sin,
+                pivotY + dx * sin + dy * cos,
+                context.z()
+            ));
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Rotate(input.mapAll(visitor), degrees, pivotX, pivotY));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            return n0 == input ? this : new Rotate(n0, degrees, pivotX, pivotY);
+        }
+    }
+
+    /// Samples input at (x + offsetX * amplitude, y + offsetY * amplitude, z).
+    /// offsetX / offsetY are evaluated at the INCOMING context, so they stay in the grid pass and keep their
+    /// cheap previews. Only `input` is evaluated at the displaced point.
+    /// Wire offsetX and offsetY to differently seeded sources; the same node on both gives a purely diagonal warp.
+    /// amplitude is in coordinate units (after any Scale you put in front of the offset noises).
+    public record DomainWarp(NoiseFunction input, NoiseFunction offsetX, NoiseFunction offsetY, double amplitude) implements NoiseFunction {
+        public static final MapCodec<DomainWarp> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(DomainWarp::input),
+            NoiseFunction.CODEC.fieldOf("offset_x").forGetter(DomainWarp::offsetX),
+            NoiseFunction.CODEC.fieldOf("offset_y").forGetter(DomainWarp::offsetY),
+            Codec.DOUBLE.fieldOf("amplitude").forGetter(DomainWarp::amplitude)
+        ).apply(i, DomainWarp::new));
+
+        @Override
+        public double compute(Context context) {
+            double dx = offsetX.compute(context) * amplitude;
+            double dy = offsetY.compute(context) * amplitude;
+            return input.compute(new SinglePointContext(context.x() + dx, context.y() + dy, context.z()));
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new DomainWarp(input.mapAll(visitor), offsetX.mapAll(visitor), offsetY.mapAll(visitor), amplitude));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            NoiseFunction n1 = function.apply(offsetX);
+            NoiseFunction n2 = function.apply(offsetY);
+            return n0 == input && n1 == offsetX && n2 == offsetY ? this : new DomainWarp(n0, n1, n2, amplitude);
+
         }
     }
 
