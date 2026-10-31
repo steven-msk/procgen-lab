@@ -18,6 +18,7 @@ import com.seven.procgen.engine.noise.graph.NoiseGraph;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.registry.Registry;
 import com.seven.procgen.engine.util.color.ColorRamp;
+import com.seven.procgen.engine.util.math.Axis;
 import com.seven.procgen.render.NodeImage;
 import com.seven.procgen.render.NoiseImageRenderer;
 import com.seven.procgen.render.NoiseTreeImage;
@@ -50,17 +51,49 @@ public class ProcgenLab extends ApplicationAdapter {
     }
 
     private NoiseFunction tree() {
+        // Island placement: tune to image viewport
+        double cx = 512.0d, cy = 512.0d, radius = 498.0d;
+
+        // Mountains, same as before, then domain-warped so the ridges meander
         NoiseFunction mountains = createCombiner("mountains", NoiseCombinerType.RIDGED_MULTIFRACTAL, NoiseSamplerType.PERLIN,
             RidgedMultifractalCombiner.Parameters.of(6, 0.01d, 2.0d, 0.5d, 2.0d, 1.0d)
         );
         NoiseFunction detail = createSampler("detail", NoiseSamplerType.PERLIN, 0.1d, 0.1d, 1.0d);
+        NoiseFunction ridges = mountains.add(detail.mul(0.2d));
+
+        NoiseFunction warpNoise = createSampler("warp", NoiseSamplerType.PERLIN, 0.01d, 0.01d, 1.0d);
+        NoiseFunction warpY = offset(warpNoise, 1731.0d, 947.0d, 0.0d); // decorrelated copy, no second seed
+        NoiseFunction warpedRidges = warp(ridges, warpNoise, warpY, 40.0d);
+
+        // Plains: gentle relief, sitting just above sea level, plus stretched + rotated "strata"
         NoiseFunction plains = createSampler("plains", NoiseSamplerType.PERLIN, 0.02d, 0.02d, 1.0d);
+        NoiseFunction strata = rotate(scale(createSampler("strata", NoiseSamplerType.PERLIN), 0.03d, 0.006d, 1.0d), 35.0d);
+        NoiseFunction lowlands = plains.mul(0.12d).add(strata.mul(0.05d)).add(constant(0.1d));
 
-        NoiseFunction a = mountains.add(detail.mul(0.2d));
-
+        // Biome select: a large-scale mask picks mountains vs lowlands, with a soft transition band
         NoiseFunction mask = createSampler("mask", NoiseSamplerType.PERLIN, 0.005d, 0.005d, 1.0d);
-        NoiseFunction b = lerp(remap01(plains), a, remap01(mask));
-        return b;
+        NoiseFunction land = select(mask, 0.05d, 0.2d, warpedRidges, lowlands);
+
+        // Terraces, faded in only on high ground so the coast stays smooth
+        NoiseFunction terraced = affine(terrace(remap01(land), 12, 0.35d), 2.0d, -1.0d);
+        NoiseFunction highGround = clamp(affine(land, 2.5d, -0.5d), 0.0d, 1.0d); // 0 at 0.2, 1 at 0.6
+        NoiseFunction base = lerp(land, terraced, highGround);
+
+        // Height distribution curve: sea level stays at 0, lowlands flatten, peaks steepen
+        NoiseFunction shaped = curveRemap(clamp(base, -1.0d, 1.0d), b -> b
+            .point(-1.0d, -1.0d)
+            .point(-0.3d, -0.6d)
+            .point(0.0d, 0.0d)
+            .point(0.3d, 0.2d)
+            .point(0.6d, 0.5d)
+            .point(1.0d, 1.0d)
+        );
+
+        // Island falloff (ocean outside the radius) and a slight north-south tilt
+        NoiseFunction island = radialGradient(cx, cy, radius * 0.45d, radius, 0.25d, -1.0d);
+        NoiseFunction tilt = gradient(Axis.Y, cy - radius, cy + radius, 0.08d, -0.08d);
+
+        return clamp(shaped.mul(0.75d).add(island).add(tilt), -1.0d, 1.0d);
     }
 
     @Override
@@ -74,7 +107,7 @@ public class ProcgenLab extends ApplicationAdapter {
         NoiseFunction noise = tree().mapAll(new NoiseState(seed, Registry.getDefaultLookup()));
         this.field = SampleField.sampleFunction(noise, size, size, 0.0d, 0.0d, 1.0d);
         this.renderer = new NoiseImageRenderer();
-        this.treeImage = new NoiseTreeImage(noise, new NoiseTreeImage.SamplerContext(NODE_IMAGE_SIZE, 0.0d, 0.0d, (double)size / NODE_IMAGE_SIZE), currentConfig());
+        this.treeImage = new NoiseTreeImage(noise, new NoiseTreeImage.SamplerState(NODE_IMAGE_SIZE, 0.0d, 0.0d, (double)size / NODE_IMAGE_SIZE), currentConfig());
         refresh();
 
         JsonElement json = NoiseGraph.TREE_CODEC.encodeStart(JsonOps.INSTANCE, noise).getOrThrow();

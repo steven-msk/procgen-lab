@@ -29,7 +29,7 @@ public final class NodeImage implements Disposable {
         this.field = sampled;
     }
 
-    void update(NoiseTreeImage.SamplerContext s, Config config, int viewVersion) {
+    void update(NoiseTreeImage.SamplerState s, Config config, int viewVersion) {
         if (field == null) { // fallback: node wasn't reached on the grid (e.g. under a warp)
             field = SampleField.sampleFunction(node, s.size(), s.size(), s.originX(), s.originY(), s.step());
         }

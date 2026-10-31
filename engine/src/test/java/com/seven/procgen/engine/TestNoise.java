@@ -37,6 +37,10 @@ public final class TestNoise {
         REGISTRY_LOOKUP = Registry.getDefaultLookup();
     }
 
+    static void ensureSetup() {
+        // this ensures the static ctor was called
+    }
+
     public static NoiseFunction bind(NoiseFunction tree, long seed) {
         RandomFork fork = new JavaRandomSource(seed).fork();
         return tree.mapAll(new NoiseFunction.Visitor() {
@@ -46,7 +50,7 @@ public final class TestNoise {
             }
 
             @Override
-            public NoiseFunction.SamplerEntry visitSampler(NoiseFunction.SamplerEntry sampler) {
+            public <T> NoiseFunction.SamplerEntry<T> visitSampler(NoiseFunction.SamplerEntry<T> sampler) {
                 return sampler.bind(fork, REGISTRY_LOOKUP);
             }
 

@@ -29,7 +29,7 @@ public final class NoiseCombinerType<T extends NoiseCombiner.Parameters> impleme
     }
 
     @Override
-    public NoiseCombiner<T> getCombiner(RandomSource random, NoiseSamplerProvider samplerProvider, T parameters) {
+    public NoiseCombiner<T> getCombiner(RandomSource random, NoiseSamplerProvider<?> samplerProvider, T parameters) {
         return getter.getCombiner(random, samplerProvider, parameters);
     }
 

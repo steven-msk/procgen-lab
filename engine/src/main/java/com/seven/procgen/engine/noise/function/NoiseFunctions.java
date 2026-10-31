@@ -1,6 +1,8 @@
 package com.seven.procgen.engine.noise.function;
 
+import com.google.common.collect.ImmutableList;
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DataResult;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
@@ -9,31 +11,45 @@ import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.registry.Identifier;
 import com.seven.procgen.engine.registry.Registry;
 import com.seven.procgen.engine.registry.RegistryKey;
+import com.seven.procgen.engine.util.math.Axis;
+import com.seven.procgen.engine.util.math.Maths;
 import com.seven.procgen.engine.util.serialization.Codecs;
 import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
 
+import java.util.List;
 import java.util.function.DoubleBinaryOperator;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.UnaryOperator;
 
 public final class NoiseFunctions {
 
-    public static NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider> provider) {
+    public static NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider<?>> provider) {
         return createSampler(id, provider, 1.0d, 1.0d, 1.0d);
     }
 
-    public static NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider> provider, double xScale, double yScale, double zScale) {
-        return new Sampler(new NoiseFunction.SamplerEntry(Identifier.of(id), provider, null), xScale, yScale, zScale);
+    public static NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider<?>> key, double xScale, double yScale, double zScale) {
+        return withDefaults(id, key, Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value(), xScale, yScale, zScale);
+    }
+
+    private static <T> NoiseFunction withDefaults(String id, RegistryKey<NoiseSamplerProvider<?>> key, NoiseSamplerProvider<T> provider, double sx, double sy, double sz) {
+        return createSampler(id, key, provider.defaultParameters(), sx, sy, sz);
+    }
+
+    public static <T> NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider<?>> key, T parameters, double xScale, double yScale, double zScale) {
+        return new Sampler<>(new NoiseFunction.SamplerEntry<>(Identifier.of(id), key, parameters, null), xScale, yScale, zScale);
     }
 
     public static <T extends NoiseCombiner.Parameters> NoiseFunction createCombiner(
-        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey, RegistryKey<NoiseSamplerProvider> samplerKey, T parameters
+        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey,
+        RegistryKey<NoiseSamplerProvider<?>> samplerKey, T parameters
     ) {
         return createCombiner(id, combinerKey, samplerKey, parameters, 1.0d, 1.0d, 1.0d);
     }
 
     public static <T extends NoiseCombiner.Parameters> NoiseFunction createCombiner(
-        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey, RegistryKey<NoiseSamplerProvider> samplerKey, T parameters, double xScale, double yScale, double zScale
+        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey,
+        RegistryKey<NoiseSamplerProvider<?>> samplerKey, T parameters, double xScale, double yScale, double zScale
     ) {
         return new Combiner<>(new NoiseFunction.CombinerEntry<>(Identifier.of(id), combinerKey, samplerKey, parameters, null), xScale, yScale, zScale);
     }
@@ -98,14 +114,102 @@ public final class NoiseFunctions {
         return new Lerp(a, b, t);
     }
 
-    public record Sampler(NoiseFunction.SamplerEntry samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
-        public static final MapCodec<Sampler> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("id").forGetter(n -> n.samplerEntry().id()),
-            NoiseSamplerProvider.KEY_CODEC.fieldOf("sampler").forGetter(n -> n.samplerEntry().providerKey()),
+    public static NoiseFunction scale(NoiseFunction f, double xScale, double yScale, double zScale) {
+        return new Scale(f, xScale, yScale, zScale);
+    }
+
+    public static NoiseFunction scale(NoiseFunction f, double factor) {
+        return Scale.uniform(f, factor);
+    }
+
+    public static NoiseFunction offset(NoiseFunction f, double offsetX, double offsetY, double offsetZ) {
+        return new Offset(f, offsetX, offsetY, offsetZ);
+    }
+
+    public static NoiseFunction rotate(NoiseFunction f, double degrees, double pivotX, double pivotY) {
+        return new Rotate(f, degrees, pivotX, pivotY);
+    }
+
+    public static NoiseFunction rotate(NoiseFunction f, double degrees) {
+        return new Rotate(f, degrees, 0.0d, 0.0d);
+    }
+
+    public static NoiseFunction warp(NoiseFunction f, NoiseFunction offsetX, NoiseFunction offsetY, double amplitude) {
+        return new DomainWarp(f, offsetX, offsetY, amplitude);
+    }
+
+    public static NoiseFunction gradient(Axis axis, double from, double to, double fromValue, double toValue) {
+        return new Gradient(axis, from, to, fromValue, toValue);
+    }
+
+    public static NoiseFunction gradient01(Axis axis, double from, double to) {
+        return gradient(axis, from, to, 0.0d, 1.0d);
+    }
+
+    public static NoiseFunction gradient10(Axis axis, double from, double to) {
+        return gradient(axis, from, to, 1.0d, 0.0d);
+    }
+
+    public static NoiseFunction radialGradient(double centerX, double centerY, double innerRadius, double outerRadius, double innerValue, double outerValue) {
+        return new RadialGradient(centerX, centerY, innerRadius, outerRadius, innerValue, outerValue);
+    }
+
+    public static NoiseFunction radialGradient01(double centerX, double centerY, double innerRadius, double outerRadius) {
+        return radialGradient(centerX, centerY, innerRadius, outerRadius, 0.0d, 1.0d);
+    }
+
+    public static NoiseFunction radialGradient10(double centerX, double centerY, double innerRadius, double outerRadius) {
+        return radialGradient(centerX, centerY, innerRadius, outerRadius, 1.0d, 0.0d);
+    }
+
+    public static NoiseFunction radialGradient(double center, double innerRadius, double outerRadius, double innerValue, double outerValue) {
+        return radialGradient(center, center, innerRadius, outerRadius, innerValue, outerValue);
+    }
+
+    public static NoiseFunction radialGradient01(double innerRadius, double outerRadius) {
+        return radialGradient(0.0d, 0.0d, innerRadius, outerRadius, 0.0d, 1.0d);
+    }
+
+    public static NoiseFunction radialGradient10(double innerRadius, double outerRadius) {
+        return radialGradient(0.0d, 0.0d, innerRadius, outerRadius, 1.0d, 0.0d);
+    }
+
+    public static NoiseFunction terrace(NoiseFunction input, int levels, double smoothness) {
+        return new Terrace(input, levels, smoothness);
+    }
+
+    public static NoiseFunction curveRemap(NoiseFunction input, List<CurveRemap.Point> points) {
+        return new CurveRemap(input, points);
+    }
+
+    public static NoiseFunction curveRemap(NoiseFunction input, UnaryOperator<CurveRemap.Builder> builder) {
+        return builder.apply(new CurveRemap.Builder(input)).build();
+    }
+
+    public static NoiseFunction select(NoiseFunction selector, double threshold, double edge, NoiseFunction above, NoiseFunction below) {
+        return new Select(selector, threshold, edge, above, below);
+    }
+
+    public static NoiseFunction select(NoiseFunction selector, double threshold, NoiseFunction above, NoiseFunction below) {
+        return select(selector, threshold, 0.0d, above, below);
+    }
+
+    public record Sampler<T>(NoiseFunction.SamplerEntry<T> samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
+        public static final MapCodec<Sampler<?>> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseSamplerProvider.KEY_CODEC.<SamplerEntry<?>>dispatchMap("sampler", SamplerEntry::providerKey, Sampler::entryCodec).forGetter(Sampler::samplerEntry),
             Codec.DOUBLE.fieldOf("scale_x").forGetter(Sampler::xScale),
             Codec.DOUBLE.fieldOf("scale_y").forGetter(Sampler::yScale),
             Codec.DOUBLE.fieldOf("scale_z").forGetter(Sampler::zScale)
-        ).apply(i, (id, provider, sx, sy, sz) -> new Sampler(new SamplerEntry(id, provider, null), sx, sy, sz)));
+        ).apply(i, Sampler::new));
+
+        @SuppressWarnings("unchecked")
+        private static <T> MapCodec<SamplerEntry<T>> entryCodec(RegistryKey<NoiseSamplerProvider<?>> key) {
+            NoiseSamplerProvider<T> provider = (NoiseSamplerProvider<T>)Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value();
+            return RecordCodecBuilder.mapCodec(i -> i.group(
+                Identifier.CODEC.fieldOf("id").forGetter(SamplerEntry::id),
+                provider.parametersCodec().optionalFieldOf("parameters", provider.defaultParameters()).forGetter(SamplerEntry::parameters)
+            ).apply(i, (id, params) -> new SamplerEntry<>(id, key, params, null)));
+        }
 
         @Override
         public double compute(Context context) {
@@ -114,7 +218,7 @@ public final class NoiseFunctions {
 
         @Override
         public NoiseFunction mapAll(Visitor visitor) {
-            return visitor.apply(new Sampler(visitor.visitSampler(samplerEntry), xScale, yScale, zScale));
+            return visitor.apply(new Sampler<>(visitor.visitSampler(samplerEntry), xScale, yScale, zScale));
         }
 
         @Override
@@ -135,7 +239,7 @@ public final class NoiseFunctions {
 
     public record Combiner<T extends NoiseCombiner.Parameters>(NoiseFunction.CombinerEntry<T> combinerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
         public static final MapCodec<Combiner<? extends NoiseCombiner.Parameters>> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            NoiseCombinerProvider.KEY_CODEC.<CombinerEntry<?>>dispatchMap("type", CombinerEntry::combinerKey, Combiner::entryCodec)
+            NoiseCombinerProvider.KEY_CODEC.<CombinerEntry<?>>dispatchMap("combiner", CombinerEntry::combinerKey, Combiner::entryCodec)
                 .fieldOf("combiner").forGetter(Combiner::combinerEntry),
             Codec.DOUBLE.fieldOf("scale_x").forGetter(Combiner::xScale),
             Codec.DOUBLE.fieldOf("scale_y").forGetter(Combiner::yScale),
@@ -411,6 +515,448 @@ public final class NoiseFunctions {
         @Override
         public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
             return this;
+        }
+    }
+
+    /// Multiplies the sampling coordinates per axis. Basically a frequency multiplier, e.g 2 = features half as large
+    public record Scale(NoiseFunction input, double x, double y, double z) implements NoiseFunction {
+        public static final MapCodec<Scale> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(Scale::input),
+            Codec.DOUBLE.fieldOf("x").forGetter(Scale::x),
+            Codec.DOUBLE.fieldOf("y").forGetter(Scale::y),
+            Codec.DOUBLE.optionalFieldOf("z", 1.0d).forGetter(Scale::z)
+        ).apply(i, Scale::new));
+
+        public static Scale uniform(NoiseFunction input, double factor) {
+            return new Scale(input, factor, factor, factor);
+        }
+
+        @Override
+        public double compute(Context context) {
+            return input.compute(new SinglePointContext(context.x() * x, context.y() * y, context.z() * z));
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Scale(input.mapAll(visitor), x, y, z));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            return n0 == input ? this : new Scale(n0, x, y, z);
+        }
+    }
+
+    /// Adds a constant to the sampling coordinates
+    public record Offset(NoiseFunction input, double dx, double dy, double dz) implements NoiseFunction {
+        public static final MapCodec<Offset> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(Offset::input),
+            Codec.DOUBLE.optionalFieldOf("dx", 0.0d).forGetter(Offset::dx),
+            Codec.DOUBLE.optionalFieldOf("dy", 0.0d).forGetter(Offset::dy),
+            Codec.DOUBLE.optionalFieldOf("dz", 0.0d).forGetter(Offset::dz)
+        ).apply(i, Offset::new));
+
+        @Override
+        public double compute(Context context) {
+            return input.compute(new SinglePointContext(context.x() + dx, context.y() + dy, context.z() + dz));
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Offset(input.mapAll(visitor), dx, dy, dz));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            return n0 == input ? this : new Offset(n0, dx, dy, dz);
+        }
+    }
+
+    public record Rotate(NoiseFunction input, double degrees, double pivotX, double pivotY, double cos, double sin) implements NoiseFunction {
+        public static final MapCodec<Rotate> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(Rotate::input),
+            Codec.DOUBLE.fieldOf("degrees").forGetter(Rotate::degrees),
+            Codec.DOUBLE.optionalFieldOf("pivot_x", 0.0d).forGetter(Rotate::pivotX),
+            Codec.DOUBLE.optionalFieldOf("pivot_y", 0.0d).forGetter(Rotate::pivotY)
+        ).apply(i, Rotate::new));
+
+        public Rotate {
+            double radians = Math.toRadians(degrees);
+            cos = Math.cos(radians);
+            sin = Math.sin(radians);
+        }
+
+        public Rotate(NoiseFunction input, double degrees, double pivotX, double pivotY) {
+            this(input, degrees, pivotX, pivotY, 0.0d, 0.0d); // cos/sin are overwritten by compact ctor
+        }
+
+        @Override
+        public double compute(Context context) {
+            double dx = context.x() - pivotX;
+            double dy = context.y() - pivotY;
+            return input.compute(new SinglePointContext(
+                pivotX + dx * cos - dy * sin,
+                pivotY + dx * sin + dy * cos,
+                context.z()
+            ));
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Rotate(input.mapAll(visitor), degrees, pivotX, pivotY));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            return n0 == input ? this : new Rotate(n0, degrees, pivotX, pivotY);
+        }
+    }
+
+    /// Samples input at (x + offsetX * amplitude, y + offsetY * amplitude, z).
+    /// offsetX / offsetY are evaluated at the INCOMING context, so they stay in the grid pass and keep their
+    /// cheap previews. Only `input` is evaluated at the displaced point.
+    /// Wire offsetX and offsetY to differently seeded sources; the same node on both gives a purely diagonal warp.
+    /// amplitude is in coordinate units (after any Scale you put in front of the offset noises).
+    public record DomainWarp(NoiseFunction input, NoiseFunction offsetX, NoiseFunction offsetY, double amplitude) implements NoiseFunction {
+        public static final MapCodec<DomainWarp> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(DomainWarp::input),
+            NoiseFunction.CODEC.fieldOf("offset_x").forGetter(DomainWarp::offsetX),
+            NoiseFunction.CODEC.fieldOf("offset_y").forGetter(DomainWarp::offsetY),
+            Codec.DOUBLE.fieldOf("amplitude").forGetter(DomainWarp::amplitude)
+        ).apply(i, DomainWarp::new));
+
+        @Override
+        public double compute(Context context) {
+            double dx = offsetX.compute(context) * amplitude;
+            double dy = offsetY.compute(context) * amplitude;
+            return input.compute(new SinglePointContext(context.x() + dx, context.y() + dy, context.z()));
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new DomainWarp(input.mapAll(visitor), offsetX.mapAll(visitor), offsetY.mapAll(visitor), amplitude));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            NoiseFunction n1 = function.apply(offsetX);
+            NoiseFunction n2 = function.apply(offsetY);
+            return n0 == input && n1 == offsetX && n2 == offsetY ? this : new DomainWarp(n0, n1, n2, amplitude);
+
+        }
+    }
+
+    /// Clamped linear ramp along one axis: fromValue at `from`, toValue at `to`, held flat outside.
+    /// Defaults to the usual noise range (-1..1).
+    /// from > to gives a descending ramp.
+    public record Gradient(Axis axis, double from, double to, double fromValue, double toValue) implements NoiseFunction {
+        public static final MapCodec<Gradient> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Axis.CODEC.fieldOf("axis").forGetter(Gradient::axis),
+            Codec.DOUBLE.fieldOf("from").forGetter(Gradient::from),
+            Codec.DOUBLE.fieldOf("to").forGetter(Gradient::to),
+            Codec.DOUBLE.optionalFieldOf("from_value", -1.0d).forGetter(Gradient::fromValue),
+            Codec.DOUBLE.optionalFieldOf("to_value", 1.0d).forGetter(Gradient::toValue)
+        ).apply(i, Gradient::new));
+
+        @Override
+        public double compute(Context context) {
+            double v = axis.pick(context.x(), context.y(), context.z());
+            double t = to == from ? (v < from ? 0.0d : 1.0d) : Maths.clamp01((v - from) / (to - from));
+            return fromValue + (toValue - fromValue) * t;
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(this);
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            return this;
+        }
+    }
+
+    /// Distance-from-center ramp in the XY plane. innerValue inside innerRadius, outerValue beyond outerRadius.
+    /// You can multiply or subtract it with a noise to get island masks.
+    public record RadialGradient(double centerX, double centerY, double innerRadius, double outerRadius, double innerValue, double outerValue) implements NoiseFunction {
+        public static final MapCodec<RadialGradient> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            Codec.DOUBLE.optionalFieldOf("center_x", 0.0d).forGetter(RadialGradient::centerX),
+            Codec.DOUBLE.optionalFieldOf("center_y", 0.0d).forGetter(RadialGradient::centerY),
+            Codec.DOUBLE.fieldOf("inner_radius").forGetter(RadialGradient::innerRadius),
+            Codec.DOUBLE.fieldOf("outer_radius").forGetter(RadialGradient::outerRadius),
+            Codec.DOUBLE.optionalFieldOf("inner_value", -1.0d).forGetter(RadialGradient::innerValue),
+            Codec.DOUBLE.optionalFieldOf("outer_value", 1.0d).forGetter(RadialGradient::outerValue)
+        ).apply(i, RadialGradient::new));
+
+        @Override
+        public double compute(Context context) {
+            double dx = context.x() - centerX;
+            double dy = context.y() - centerY;
+            double d = Math.sqrt(dx * dx + dy * dy);
+            double t = outerRadius == innerRadius
+                ? (d < innerRadius ? 0.0d : 1.0d)
+                : Maths.clamp01((d - innerRadius) / (outerRadius - innerRadius));
+            return innerValue + (outerValue - innerValue) * t;
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(this);
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            return this;
+        }
+    }
+
+    /// Quantizes a 0..1 input into `levels` plateaus (feed it through remap01 first).
+    /// smoothness 0 = hard steps; larger values round the risers (smoothstep over the top `smoothness`
+    /// fraction of each level). Output stays in 0..1 and is continuous when smoothness > 0.
+    public record Terrace(NoiseFunction input, int levels, double smoothness) implements NoiseFunction {
+        public static final MapCodec<Terrace> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(Terrace::input),
+            Codec.intRange(2, 1024).fieldOf("levels").forGetter(Terrace::levels),
+            Codec.doubleRange(0.0d, 1.0d).fieldOf("smoothness").forGetter(Terrace::smoothness)
+        ).apply(i, Terrace::new));
+
+        public Terrace {
+            if (smoothness < 0.0d || smoothness > 1.0d)
+                throw new IllegalArgumentException("terrace smoothness must be in [0,1]");
+            if (levels < 2) throw new IllegalArgumentException("terrace must have at least 2 levels");
+            if (levels > 1024) throw new IllegalArgumentException("terrace has too many levels: " + levels + " > 1024");
+        }
+
+        @Override
+        public double compute(Context context) {
+            double t = input.compute(context) * levels;
+            double base = Math.floor(t);
+            double ramp = 0.0d;
+            if (smoothness > 0.0d) {
+                double frac = t - base;
+                ramp = Maths.smoothstep(Maths.clamp01((frac - (1.0d - smoothness)) / smoothness));
+            }
+            return (base + ramp) / levels;
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Terrace(input.mapAll(visitor), levels, smoothness));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            return n0 == input ? this : new Terrace(n0, levels, smoothness);
+        }
+    }
+
+    /// Spline remap through user-placed points (in -> out), cubic Hermite with Fritsch-Butland slopes,
+    /// so the curve is smooth and never overshoots between points (a monotone input gives a monotone output).
+    /// Values outside the first/last `in` are held at the end points' `out`.
+    /// Slopes are computed per call from the two neighboring segments: no hidden arrays, so the record
+    /// keeps structural equals/hashCode for node dedup.
+    public record CurveRemap(NoiseFunction input, List<Point> points) implements NoiseFunction {
+        public static final MapCodec<CurveRemap> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("input").forGetter(CurveRemap::input),
+            Point.CODEC.listOf().validate(list -> {
+                String problem = findProblem(list);
+                return problem == null ? DataResult.success(list) : DataResult.error(() -> problem);
+            }).fieldOf("points").forGetter(CurveRemap::points)
+        ).apply(i, CurveRemap::new));
+
+        public record Point(double in, double out) {
+            public static final Codec<Point> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.DOUBLE.fieldOf("in").forGetter(Point::in),
+                Codec.DOUBLE.fieldOf("out").forGetter(Point::out)
+            ).apply(i, Point::new));
+        }
+
+        public CurveRemap {
+            String problem = findProblem(points);
+            if (problem != null) throw new IllegalArgumentException(problem);
+            points = List.copyOf(points);
+        }
+
+        private static @Nullable String findProblem(List<Point> points) {
+            if (points.size() < 2) return "curve needs at least 2 points";
+            for (int k = 1; k < points.size(); k++) {
+                if (!(points.get(k).in() > points.get(k - 1).in())) {
+                    return "curve points need strictly increasing 'in' values";
+                }
+            }
+            return null;
+        }
+
+        private double delta(int k) {
+            Point a = points.get(k);
+            Point b = points.get(k + 1);
+            return (b.out() - a.out()) / (b.in() - a.in());
+        }
+
+        private double slope(int k) {
+            int size = points.size();
+            if (k == 0) return delta(0);
+            if (k == size - 1) return delta(size - 2);
+            double d0 = delta(k - 1);
+            double d1 = delta(k);
+            if (d0 * d1 <= 0.0d) return 0.0d; // local extremum or flat: keep it flat
+            double h0 = points.get(k).in() - points.get(k - 1).in();
+            double h1 = points.get(k + 1).in() - points.get(k).in();
+            double w1 = 2.0d * h1 + h0;
+            double w2 = h1 + 2.0d * h0;
+            return (w1 + w2) / (w1 / d0 + w2 / d1);
+        }
+
+        @Override
+        public double compute(Context context) {
+            double v = input.compute(context);
+            int size = points.size();
+            Point first = points.getFirst();
+            Point last = points.getLast();
+            if (v <= first.in()) return first.out();
+            if (v >= last.in()) return last.out();
+
+            int lo = 0;
+            int hi = size - 1;
+            while (hi - lo > 1) {
+                int mid = (lo + hi) >>> 1;
+                if (points.get(mid).in() <= v) lo = mid;
+                else hi = mid;
+            }
+
+            Point a = points.get(lo);
+            Point b = points.get(lo + 1);
+            double h = b.in() - a.in();
+            double t = (v - a.in()) / h;
+            double t2 = t * t;
+            double t3 = t2 * t;
+            return (2 * t3 - 3 * t2 + 1) * a.out()
+                + (t3 - 2 * t2 + t) * h * slope(lo)
+                + (-2 * t3 + 3 * t2) * b.out()
+                + (t3 - t2) * h * slope(lo + 1);
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new CurveRemap(input.mapAll(visitor), points));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(input);
+            return n0 == input ? this : new CurveRemap(n0, points);
+        }
+
+        public static final class Builder {
+            private final ImmutableList.Builder<CurveRemap.Point> builder = new ImmutableList.Builder<>();
+            private final NoiseFunction input;
+
+            public Builder(NoiseFunction input) {
+                this.input = input;
+            }
+
+            public Builder point(Point point) {
+                builder.add(point);
+                return this;
+            }
+
+            public Builder point(double in, double out) {
+                return point(new Point(in, out));
+            }
+
+            public CurveRemap build() {
+                return new CurveRemap(input, builder.build());
+            }
+        }
+    }
+
+    /// Picks between two branches by comparing `selector` with `threshold`.
+    /// edge = 0: hard switch, only the chosen branch is evaluated.
+    /// edge > 0: smoothstep crossfade over [threshold - edge, threshold + edge].
+    /// both branches are only evaluated for pixels inside that band.
+    public record Select(NoiseFunction selector, double threshold, double edge, NoiseFunction above, NoiseFunction below) implements NoiseFunction {
+        public static final MapCodec<Select> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseFunction.CODEC.fieldOf("selector").forGetter(Select::selector),
+            Codec.DOUBLE.fieldOf("threshold").forGetter(Select::threshold),
+            Codec.doubleRange(0.0d, Double.MAX_VALUE).optionalFieldOf("edge", 0.0d).forGetter(Select::edge),
+            NoiseFunction.CODEC.fieldOf("above").forGetter(Select::above),
+            NoiseFunction.CODEC.fieldOf("below").forGetter(Select::below)
+        ).apply(i, Select::new));
+
+        @Override
+        public double compute(Context context) {
+            double s = selector.compute(context);
+            double t = edge <= 0.0d
+                ? (s >= threshold ? 1.0d : 0.0d)
+                : Maths.smoothstep(Maths.clamp01((s - (threshold - edge)) / (2.0d * edge)));
+            if (t <= 0.0d) return below.compute(context);
+            if (t >= 1.0d) return above.compute(context);
+            double b = below.compute(context);
+            double a = above.compute(context);
+            return b + (a - b) * t;
+        }
+
+        @Override
+        public MapCodec<? extends NoiseFunction> codec() {
+            return CODEC;
+        }
+
+        @Override
+        public NoiseFunction mapAll(Visitor visitor) {
+            return visitor.apply(new Select(selector.mapAll(visitor), threshold, edge, above.mapAll(visitor), below.mapAll(visitor)));
+        }
+
+        @Override
+        public NoiseFunction mapChildren(UnaryOperator<NoiseFunction> function) {
+            NoiseFunction n0 = function.apply(selector);
+            NoiseFunction n1 = function.apply(above);
+            NoiseFunction n2 = function.apply(below);
+            return n0 == selector && n1 == above && n2 == below ? this : new Select(n0, threshold, edge, n1, n2);
         }
     }
 

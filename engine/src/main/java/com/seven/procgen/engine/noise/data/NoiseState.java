@@ -27,7 +27,7 @@ public class NoiseState implements NoiseFunction.Visitor {
     }
 
     @Override
-    public NoiseFunction.SamplerEntry visitSampler(NoiseFunction.SamplerEntry sampler) {
+    public <T> NoiseFunction.SamplerEntry<T> visitSampler(NoiseFunction.SamplerEntry<T> sampler) {
         return sampler.bind(randomFork, registryLookup);
     }
 

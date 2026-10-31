@@ -1,23 +1,63 @@
 package com.seven.procgen.engine.noise.sampler;
 
+import com.mojang.datafixers.util.Unit;
+import com.mojang.serialization.Codec;
 import com.seven.procgen.engine.registry.Identifier;
 import com.seven.procgen.engine.registry.Registries;
 import com.seven.procgen.engine.registry.Registry;
 import com.seven.procgen.engine.registry.RegistryKey;
 
-public final class NoiseSamplerType {
-    public static final RegistryKey<NoiseSamplerProvider> WHITE = register("white");
-    public static final RegistryKey<NoiseSamplerProvider> PERLIN = register("perlin");
+import java.util.function.BiFunction;
+import java.util.function.LongFunction;
 
-    private static RegistryKey<NoiseSamplerProvider> register(String id) {
+public final class NoiseSamplerType<T> implements NoiseSamplerProvider<T> {
+    public static final RegistryKey<NoiseSamplerProvider<?>> WHITE = register("white");
+    public static final RegistryKey<NoiseSamplerProvider<?>> PERLIN = register("perlin");
+    public static final RegistryKey<NoiseSamplerProvider<?>> VALUE = register("value");
+    public static final RegistryKey<NoiseSamplerProvider<?>> SIMPLEX = register("simplex");
+    public static final RegistryKey<NoiseSamplerProvider<?>> WORLEY = register("worley");
+    private final BiFunction<Long, T, NoiseSampler> samplerFunction;
+    private final Codec<T> parametersCodec;
+    private final T defaultParameters;
+
+    private static RegistryKey<NoiseSamplerProvider<?>> register(String id) {
         return RegistryKey.of(Registries.NOISE_SAMPLER_PROVIDER, Identifier.of(id));
     }
 
-    public static NoiseSamplerProvider init(Registry<NoiseSamplerProvider> registry) {
-        Registry.register(registry, WHITE, WhiteNoise::new);
-        return Registry.register(registry, PERLIN, PerlinNoise::new);
+    public static NoiseSamplerProvider<?> init(Registry<NoiseSamplerProvider<?>> registry) {
+        Registry.register(registry, PERLIN, parameterless(PerlinNoise::new));
+        Registry.register(registry, VALUE, parameterless(ValueNoise::new));
+        Registry.register(registry, SIMPLEX, parameterless(SimplexNoise::new));
+        Registry.register(registry, WORLEY, parametrized(WorleyNoise::new, WorleyNoise.Parameters.CODEC, WorleyNoise.Parameters.DEFAULT));
+        return Registry.register(registry, WHITE, parameterless(WhiteNoise::new));
     }
 
-    private NoiseSamplerType() {
+    private static NoiseSamplerType<Unit> parameterless(LongFunction<NoiseSampler> factory) {
+        return new NoiseSamplerType<>((seed, unit) -> factory.apply(seed), Codec.unit(Unit.INSTANCE), Unit.INSTANCE);
+    }
+
+    private static <T> NoiseSamplerType<T> parametrized(BiFunction<Long, T, NoiseSampler> factory, Codec<T> parametersCodec, T defaultParameters) {
+        return new NoiseSamplerType<>(factory, parametersCodec, defaultParameters);
+    }
+
+    private NoiseSamplerType(BiFunction<Long, T, NoiseSampler> samplerFunction, Codec<T> parametersCodec, T defaultParameters) {
+        this.samplerFunction = samplerFunction;
+        this.parametersCodec = parametersCodec;
+        this.defaultParameters = defaultParameters;
+    }
+
+    @Override
+    public NoiseSampler getSampler(long seed, T parameters) {
+        return samplerFunction.apply(seed, parameters);
+    }
+
+    @Override
+    public Codec<T> parametersCodec() {
+        return parametersCodec;
+    }
+
+    @Override
+    public T defaultParameters() {
+        return defaultParameters;
     }
 }

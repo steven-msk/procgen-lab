@@ -12,8 +12,7 @@ import static com.seven.procgen.engine.TestNoise.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
-public class NoiseDeterminismTest {
-
+public class TreeDeterminismTest {
     @Test
     void bindingTheSameTreeTwiceGivesIdenticalOutput() {
         NoiseFunction tree = tree();
