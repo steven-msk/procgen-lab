@@ -24,22 +24,30 @@ import java.util.function.UnaryOperator;
 
 public final class NoiseFunctions {
 
-    public static NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider> provider) {
+    public static NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider<?>> provider) {
         return createSampler(id, provider, 1.0d, 1.0d, 1.0d);
     }
 
-    public static NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider> provider, double xScale, double yScale, double zScale) {
-        return new Sampler(new NoiseFunction.SamplerEntry(Identifier.of(id), provider, null), xScale, yScale, zScale);
+    public static NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider<?>> key, double xScale, double yScale, double zScale) {
+        return withDefaults(id, key, Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value(), xScale, yScale, zScale);
+    }
+
+    private static <T> NoiseFunction withDefaults(String id, RegistryKey<NoiseSamplerProvider<?>> key, NoiseSamplerProvider<T> provider, double sx, double sy, double sz) {
+        return createSampler(id, key, provider.defaultParameters(), sx, sy, sz);
+    }
+
+    public static <T> NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider<?>> key, T parameters, double xScale, double yScale, double zScale) {
+        return new Sampler<>(new NoiseFunction.SamplerEntry<>(Identifier.of(id), key, parameters, null), xScale, yScale, zScale);
     }
 
     public static <T extends NoiseCombiner.Parameters> NoiseFunction createCombiner(
-        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey, RegistryKey<NoiseSamplerProvider> samplerKey, T parameters
+        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey, RegistryKey<NoiseSamplerProvider<?>> samplerKey, T parameters
     ) {
         return createCombiner(id, combinerKey, samplerKey, parameters, 1.0d, 1.0d, 1.0d);
     }
 
     public static <T extends NoiseCombiner.Parameters> NoiseFunction createCombiner(
-        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey, RegistryKey<NoiseSamplerProvider> samplerKey, T parameters, double xScale, double yScale, double zScale
+        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey, RegistryKey<NoiseSamplerProvider<?>> samplerKey, T parameters, double xScale, double yScale, double zScale
     ) {
         return new Combiner<>(new NoiseFunction.CombinerEntry<>(Identifier.of(id), combinerKey, samplerKey, parameters, null), xScale, yScale, zScale);
     }
@@ -184,14 +192,22 @@ public final class NoiseFunctions {
         return select(selector, threshold, 0.0d, above, below);
     }
 
-    public record Sampler(NoiseFunction.SamplerEntry samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
-        public static final MapCodec<Sampler> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            Identifier.CODEC.fieldOf("id").forGetter(n -> n.samplerEntry().id()),
-            NoiseSamplerProvider.KEY_CODEC.fieldOf("sampler").forGetter(n -> n.samplerEntry().providerKey()),
+    public record Sampler<T>(NoiseFunction.SamplerEntry<T> samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
+        public static final MapCodec<Sampler<?>> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
+            NoiseSamplerProvider.KEY_CODEC.<SamplerEntry<?>>dispatchMap("sampler", SamplerEntry::providerKey, Sampler::entryCodec).forGetter(Sampler::samplerEntry),
             Codec.DOUBLE.fieldOf("scale_x").forGetter(Sampler::xScale),
             Codec.DOUBLE.fieldOf("scale_y").forGetter(Sampler::yScale),
             Codec.DOUBLE.fieldOf("scale_z").forGetter(Sampler::zScale)
-        ).apply(i, (id, provider, sx, sy, sz) -> new Sampler(new SamplerEntry(id, provider, null), sx, sy, sz)));
+        ).apply(i, Sampler::new));
+
+        @SuppressWarnings("unchecked")
+        private static <T> MapCodec<SamplerEntry<T>> entryCodec(RegistryKey<NoiseSamplerProvider<?>> key) {
+            NoiseSamplerProvider<T> provider = (NoiseSamplerProvider<T>)Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value();
+            return RecordCodecBuilder.mapCodec(i -> i.group(
+                Identifier.CODEC.fieldOf("id").forGetter(SamplerEntry::id),
+                provider.parametersCodec().optionalFieldOf("parameters", provider.defaultParameters()).forGetter(SamplerEntry::parameters)
+            ).apply(i, (id, params) -> new SamplerEntry<>(id, key, params, null)));
+        }
 
         @Override
         public double compute(Context context) {
@@ -200,7 +216,7 @@ public final class NoiseFunctions {
 
         @Override
         public NoiseFunction mapAll(Visitor visitor) {
-            return visitor.apply(new Sampler(visitor.visitSampler(samplerEntry), xScale, yScale, zScale));
+            return visitor.apply(new Sampler<>(visitor.visitSampler(samplerEntry), xScale, yScale, zScale));
         }
 
         @Override
@@ -221,7 +237,7 @@ public final class NoiseFunctions {
 
     public record Combiner<T extends NoiseCombiner.Parameters>(NoiseFunction.CombinerEntry<T> combinerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
         public static final MapCodec<Combiner<? extends NoiseCombiner.Parameters>> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
-            NoiseCombinerProvider.KEY_CODEC.<CombinerEntry<?>>dispatchMap("type", CombinerEntry::combinerKey, Combiner::entryCodec)
+            NoiseCombinerProvider.KEY_CODEC.<CombinerEntry<?>>dispatchMap("combiner", CombinerEntry::combinerKey, Combiner::entryCodec)
                 .fieldOf("combiner").forGetter(Combiner::combinerEntry),
             Codec.DOUBLE.fieldOf("scale_x").forGetter(Combiner::xScale),
             Codec.DOUBLE.fieldOf("scale_y").forGetter(Combiner::yScale),

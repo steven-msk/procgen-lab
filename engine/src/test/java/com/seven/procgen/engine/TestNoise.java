@@ -46,7 +46,7 @@ public final class TestNoise {
             }
 
             @Override
-            public NoiseFunction.SamplerEntry visitSampler(NoiseFunction.SamplerEntry sampler) {
+            public <T> NoiseFunction.SamplerEntry<T> visitSampler(NoiseFunction.SamplerEntry<T> sampler) {
                 return sampler.bind(fork, REGISTRY_LOOKUP);
             }
 

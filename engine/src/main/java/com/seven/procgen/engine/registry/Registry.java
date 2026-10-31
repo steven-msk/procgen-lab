@@ -31,7 +31,7 @@ public final class Registry<T> implements IndexedIterable<T>, RegistryEntryLooku
     private static final LinkedHashMap<Identifier, Supplier<?>> LOADERS = Maps.newLinkedHashMap();
     public static final Identifier ROOT_IDENTIFIER = Identifier.of("root");
     public static final Registry<Registry<?>> REGISTRIES = new Registry<>(RegistryKey.ofRegistry(ROOT_IDENTIFIER));
-    public static final Registry<NoiseSamplerProvider> NOISE_SAMPLER_PROVIDER = create(Registries.NOISE_SAMPLER_PROVIDER, NoiseSamplerType::init);
+    public static final Registry<NoiseSamplerProvider<?>> NOISE_SAMPLER_PROVIDER = create(Registries.NOISE_SAMPLER_PROVIDER, NoiseSamplerType::init);
     public static final Registry<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> NOISE_COMBINER_PROVIDER = create(Registries.NOISE_COMBINER_PROVIDER, NoiseCombinerType::init);
     public static final Registry<MapCodec<? extends NoiseFunction>> NOISE_FUNCTION = create(Registries.NOISE_FUNCTION, NoiseFunctionTypes::init);
     private static RegistryEntryLookup.RegistryLookup bootstrapLookup;
