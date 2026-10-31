@@ -41,13 +41,15 @@ public final class NoiseFunctions {
     }
 
     public static <T extends NoiseCombiner.Parameters> NoiseFunction createCombiner(
-        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey, RegistryKey<NoiseSamplerProvider<?>> samplerKey, T parameters
+        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey,
+        RegistryKey<NoiseSamplerProvider<?>> samplerKey, T parameters
     ) {
         return createCombiner(id, combinerKey, samplerKey, parameters, 1.0d, 1.0d, 1.0d);
     }
 
     public static <T extends NoiseCombiner.Parameters> NoiseFunction createCombiner(
-        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey, RegistryKey<NoiseSamplerProvider<?>> samplerKey, T parameters, double xScale, double yScale, double zScale
+        String id, RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey,
+        RegistryKey<NoiseSamplerProvider<?>> samplerKey, T parameters, double xScale, double yScale, double zScale
     ) {
         return new Combiner<>(new NoiseFunction.CombinerEntry<>(Identifier.of(id), combinerKey, samplerKey, parameters, null), xScale, yScale, zScale);
     }

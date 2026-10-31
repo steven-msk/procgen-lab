@@ -23,11 +23,20 @@ public final class WorleyNoise implements NoiseSampler {
     private final Metric metric;
     private final Output output;
 
-    public WorleyNoise(long seed, WorleyNoise.Parameters parameters) {
+    public WorleyNoise(long seed, double jitter, Metric metric, Output output) {
         this.seed = seed;
-        this.jitter = Math.clamp(parameters.jitter, 0.0d, 1.0d);
-        this.metric = parameters.metric;
-        this.output = parameters.output;
+        this.jitter = Math.clamp(jitter, 0.0d, 1.0d);
+        this.metric = metric;
+        this.output = output;
+
+    }
+
+    public WorleyNoise(long seed, WorleyNoise.Parameters parameters) {
+        this(seed, parameters.jitter, parameters.metric, parameters.output);
+    }
+
+    public static WorleyNoise of(long seed, Output output) {
+        return new WorleyNoise(seed, 1.0d, Metric.EUCLIDEAN, output);
     }
 
     @Override
