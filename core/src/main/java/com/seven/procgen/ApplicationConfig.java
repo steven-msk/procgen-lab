@@ -1,7 +1,5 @@
 package com.seven.procgen;
 
-import joptsimple.ValueConverter;
-
 import java.util.function.IntSupplier;
 import java.util.function.ToIntFunction;
 
@@ -54,27 +52,6 @@ public final class ApplicationConfig {
 
             public int apply(Graphics graphics) {
                 return function.applyAsInt(graphics);
-            }
-
-            public static ValueConverter<FPSLimit> valueConverter() {
-                return new Converter();
-            }
-
-            private static class Converter implements ValueConverter<FPSLimit> {
-                @Override
-                public FPSLimit convert(String value) {
-                    return FPSLimit.valueOf(value);
-                }
-
-                @Override
-                public Class<? extends FPSLimit> valueType() {
-                    return FPSLimit.class;
-                }
-
-                @Override
-                public String valuePattern() {
-                    return null;
-                }
             }
         }
     }

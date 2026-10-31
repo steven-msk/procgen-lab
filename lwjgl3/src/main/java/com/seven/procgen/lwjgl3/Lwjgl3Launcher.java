@@ -7,6 +7,7 @@ import com.seven.procgen.ProcgenLab;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 import joptsimple.OptionSpec;
+import joptsimple.ValueConverter;
 
 /** Launches the desktop (LWJGL3) application. */
 public class Lwjgl3Launcher {
@@ -23,14 +24,29 @@ public class Lwjgl3Launcher {
 
     private static ApplicationConfig getDefaultApplicationConfig(String[] args) {
         OptionParser parser = new OptionParser();
-        OptionSpec<Integer> widthSpec = parser.accepts("width").withRequiredArg().ofType(Integer.class).defaultsTo(640);
-        OptionSpec<Integer> heightSpec = parser.accepts("height").withRequiredArg().ofType(Integer.class).defaultsTo(480);
+        OptionSpec<Integer> widthSpec = parser.accepts("width").withRequiredArg().ofType(Integer.class).defaultsTo(Lwjgl3ApplicationConfiguration.getDisplayMode().width);
+        OptionSpec<Integer> heightSpec = parser.accepts("height").withRequiredArg().ofType(Integer.class).defaultsTo(Lwjgl3ApplicationConfiguration.getDisplayMode().height);
         OptionSpec<String> titleSpec = parser.accepts("title").withRequiredArg().ofType(String.class).defaultsTo("procgen-lab");
         OptionSpec<Void> vsyncSpec = parser.accepts("vsync");
         OptionSpec<Integer> targetFpsSpec = parser.accepts("targetFps").withRequiredArg().ofType(Integer.class).defaultsTo(0);
         OptionSpec<ApplicationConfig.Graphics.FPSLimit> fpsLimitSpec = parser.accepts("fpsLimit").withRequiredArg().ofType(String.class)
-                .withValuesConvertedBy(ApplicationConfig.Graphics.FPSLimit.valueConverter())
-                .defaultsTo(ApplicationConfig.Graphics.FPSLimit.VSYNC_MATCH_FRACTIONAL);
+            .withValuesConvertedBy(new ValueConverter<ApplicationConfig.Graphics.FPSLimit>() {
+                @Override
+                public ApplicationConfig.Graphics.FPSLimit convert(String value) {
+                    return ApplicationConfig.Graphics.FPSLimit.valueOf(value);
+                }
+
+                @Override
+                public Class<? extends ApplicationConfig.Graphics.FPSLimit> valueType() {
+                    return ApplicationConfig.Graphics.FPSLimit.class;
+                }
+
+                @Override
+                public String valuePattern() {
+                    return null;
+                }
+            })
+            .defaultsTo(ApplicationConfig.Graphics.FPSLimit.VSYNC_MATCH_FRACTIONAL);
         OptionSet optionSet = parser.parse(args);
 
         int width = optionSet.valueOf(widthSpec);
@@ -42,7 +58,7 @@ public class Lwjgl3Launcher {
         int targetFps = optionSet.valueOf(targetFpsSpec);
         ApplicationConfig.Graphics.FPSLimit fpsLimit = optionSet.valueOf(fpsLimitSpec);
         ApplicationConfig.Graphics graphics = new ApplicationConfig.Graphics(fpsLimit, targetFps, vsync,
-                () -> Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate);
+            () -> Lwjgl3ApplicationConfiguration.getDisplayMode().refreshRate);
 
         return new ApplicationConfig(window, graphics);
     }
@@ -61,6 +77,7 @@ public class Lwjgl3Launcher {
         //// You may also need to configure GPU drivers to fully disable Vsync; this can cause screen tearing.
 
         configuration.setWindowedMode(config.window.width, config.window.height);
+        configuration.setMaximized(true);
         //// You can change these files; they are in lwjgl3/src/main/resources/ .
         //// They can also be loaded from the root of assets/ .
         configuration.setWindowIcon("libgdx128.png", "libgdx64.png", "libgdx32.png", "libgdx16.png");
