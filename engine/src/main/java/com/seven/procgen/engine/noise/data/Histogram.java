@@ -1,6 +1,6 @@
 package com.seven.procgen.engine.noise.data;
 
-/// Fraction of finite sampler per bin over [min, max], and the fractions that fell outside of it
+/// Fraction of finite sampler per bin over [minInclusive, maxInclusive], and the fractions that fell outside of it
 public record Histogram(float[] fractions, float peak, double min, double max, float below, float above) {
     public static Histogram of(SampleField field, double min, double max, int binCount) {
         int[] counts = new int[binCount];
@@ -20,7 +20,7 @@ public record Histogram(float[] fractions, float peak, double min, double max, f
                 } else if (v > max) {
                     above++;
                 } else {
-                    counts[Math.min((int)((v - min) / span * binCount), binCount - 1)]++; // v == max lands in the last bin
+                    counts[Math.min((int)((v - min) / span * binCount), binCount - 1)]++; // v == maxInclusive lands in the last bin
                 }
             }
         }

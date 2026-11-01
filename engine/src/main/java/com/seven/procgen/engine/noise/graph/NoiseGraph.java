@@ -62,7 +62,7 @@ public record NoiseGraph(Map<Identifier, NoiseFunction> definitions, NoiseFuncti
 
     public static String labelOf(NoiseFunction function) {
         return switch (function) {
-            case NoiseFunctions.Sampler s -> s.samplerEntry() + " (Sampler)";
+            case NoiseFunctions.Sampler<?> s -> s.samplerEntry() + " (Sampler)";
             case NoiseFunctions.Combiner<?> c -> c.combinerEntry() + " (Combiner)";
             case NoiseFunctions.Constant k -> k.value() + " (Constant)";
             case NoiseFunctions.UnaryFunction u -> u.operation().name();
@@ -129,7 +129,7 @@ public record NoiseGraph(Map<Identifier, NoiseFunction> definitions, NoiseFuncti
         }
 
         private Identifier uniqueId(NoiseFunction n) {
-            String base = n instanceof NoiseFunctions.Sampler s ? s.samplerEntry().id().toString()
+            String base = n instanceof NoiseFunctions.Sampler<?> s ? s.samplerEntry().id().toString()
                 : n instanceof NoiseFunctions.Combiner<?> c ? c.combinerEntry().id().toString()
                 : typeName(n);
             Identifier id = Identifier.of(base);
