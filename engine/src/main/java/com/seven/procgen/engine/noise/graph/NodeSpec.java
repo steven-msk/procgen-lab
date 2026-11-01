@@ -2,8 +2,9 @@ package com.seven.procgen.engine.noise.graph;
 
 import com.google.common.collect.ImmutableList;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
-import com.seven.procgen.engine.registry.Registry;
+import com.seven.procgen.engine.registry.Registries;
 import com.seven.procgen.engine.registry.RegistryEntry;
+import com.seven.procgen.engine.registry.RegistryEntryLookup;
 import com.seven.procgen.engine.registry.RegistryKey;
 import org.jspecify.annotations.Nullable;
 
@@ -35,12 +36,11 @@ public interface NodeSpec {
 
     /// The spec that produced 'function', with its decomposed pins and params.
     /// Null if none claims it.
-    static NodeSpec.@Nullable Entry findMatch(NoiseFunction function) {
-        for (RegistryKey<NodeSpec> key : Registry.NODE_SPEC.getKeys()) {
-            RegistryEntry<NodeSpec> entry = Registry.NODE_SPEC.getEntry(key).orElseThrow();
-            FunctionDecompose decomposed = entry.value().decompose(function);
-            if (decomposed != null) return new NodeSpec.Entry(entry, decomposed);
-        }
+    static NodeSpec.@Nullable Entry findMatch(NoiseFunction function, RegistryEntryLookup.RegistryLookup registryLookup) {
+        RegistryKey<NodeSpec> key = NodeSpecs.keyOf(function);
+        RegistryEntry<NodeSpec> entry = registryLookup.getOptionalEntry(Registries.NODE_SPEC, key).orElseThrow();
+        FunctionDecompose decomposed = entry.value().decompose(function);
+        if (decomposed != null) return new NodeSpec.Entry(entry, decomposed);
         return null;
     }
 
@@ -66,10 +66,10 @@ public interface NodeSpec {
                 FunctionDecompose decomposed = decomposer.apply(functionType.cast(function));
                 if (decomposed == null) return null;
                 if (!decomposed.pins().keySet().equals(pinNames)) {
-                    throw new IllegalStateException(title + ": extractor pins " + decomposed.pins().keySet() + " != spec pins " + pinNames);
+                    throw new IllegalStateException(title + ": decomposed pins " + decomposed.pins().keySet() + " != spec pins " + pinNames);
                 }
                 if (!decomposed.params().keySet().equals(paramNames)) {
-                    throw new IllegalStateException(title + ": extractor params " + decomposed.params().keySet() + " != spec params " + paramNames);
+                    throw new IllegalStateException(title + ": decomposed params " + decomposed.params().keySet() + " != spec params " + paramNames);
                 }
                 return decomposed;
             }

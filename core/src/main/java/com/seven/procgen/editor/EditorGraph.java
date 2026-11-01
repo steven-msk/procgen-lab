@@ -4,6 +4,7 @@ import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.function.NoiseFunctions;
 import com.seven.procgen.engine.noise.graph.FunctionBuildContext;
 import com.seven.procgen.engine.noise.graph.NodeSpec;
+import com.seven.procgen.engine.registry.RegistryEntryLookup;
 import org.jspecify.annotations.Nullable;
 
 import java.util.*;
@@ -19,8 +20,8 @@ public final class EditorGraph {
         this.outputId = add(OUTPUT_SPEC, 0, 0).id;
     }
 
-    public static EditorGraph importTree(NoiseFunction function) {
-        return new Importer(function).importTree();
+    public static EditorGraph importTree(NoiseFunction function, RegistryEntryLookup.RegistryLookup registryLookup) {
+        return new Importer(function, registryLookup).importTree();
     }
 
     EditorNode add(NodeSpec spec, float x, float y) {
@@ -99,9 +100,11 @@ public final class EditorGraph {
 
     public static final class Importer {
         private final NoiseFunction root;
+        private final RegistryEntryLookup.RegistryLookup registryLookup;
 
-        private Importer(NoiseFunction root) {
+        private Importer(NoiseFunction root, RegistryEntryLookup.RegistryLookup registryLookup) {
             this.root = root;
+            this.registryLookup = registryLookup;
         }
 
         public EditorGraph importTree() {
@@ -116,7 +119,7 @@ public final class EditorGraph {
             EditorNode existing = made.get(function);
             if (existing != null) return existing;
 
-            NodeSpec.Entry specEntry = NodeSpec.findMatch(function);
+            NodeSpec.Entry specEntry = NodeSpec.findMatch(function, registryLookup);
             if (specEntry == null) {
                 throw new IllegalArgumentException("No node spec for " + function.getClass().getSimpleName());
             }
