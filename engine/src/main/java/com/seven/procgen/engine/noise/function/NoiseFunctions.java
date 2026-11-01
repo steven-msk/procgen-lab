@@ -793,8 +793,7 @@ public final class NoiseFunctions {
     /// Spline remap through user-placed points (in -> out), cubic Hermite with Fritsch-Butland slopes,
     /// so the curve is smooth and never overshoots between points (a monotone input gives a monotone output).
     /// Values outside the first/last `in` are held at the end points' `out`.
-    /// Slopes are computed per call from the two neighboring segments: no hidden arrays, so the record
-    /// keeps structural equals/hashCode for node dedup.
+    /// Slopes are computed per call from the two neighboring segments.
     public record CurveRemap(NoiseFunction input, PointList points) implements NoiseFunction {
         public static final MapCodec<CurveRemap> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NoiseFunction.CODEC.fieldOf("input").forGetter(CurveRemap::input),

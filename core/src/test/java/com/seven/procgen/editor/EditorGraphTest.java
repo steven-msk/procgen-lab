@@ -29,8 +29,13 @@ public class EditorGraphTest {
             assertTrue(compiled.errors().isEmpty(), key.value() + ": " + compiled.errors());
             assertNotNull(compiled.root(), key.valueAsString());
 
-            EditorGraph back = EditorGraph.importTree(compiled.root(), Registry.getDefaultLookup());
+            EditorGraph back = EditorGraph.importTree(compiled.root());
             assertEquals(compiled.root(), back.compile().root(), key.valueAsString());
+
+            long claimants = Registry.NODE_SPEC.getKeys().stream()
+                .filter(o -> Registry.NODE_SPEC.getOrThrow(o).value().decompose(compiled.root()) != null)
+                .count();
+            assertEquals(1, claimants, key.value() + " matched by " + claimants + " specs");
         }
     }
 
@@ -38,7 +43,7 @@ public class EditorGraphTest {
     void sharedSubtreesBecomeOneNode() {
         NoiseFunction shared = NoiseFunctions.gradient(Axis.Y, 0, 64, -1, 1);
         NoiseFunction tree = NoiseFunctions.add(NoiseFunctions.abs(shared), shared);
-        EditorGraph graph = EditorGraph.importTree(tree, Registry.getDefaultLookup());
+        EditorGraph graph = EditorGraph.importTree(tree);
         assertEquals(4, graph.nodes.size());   // output, add, abs, gradient
         assertEquals(tree, graph.compile().root());
     }

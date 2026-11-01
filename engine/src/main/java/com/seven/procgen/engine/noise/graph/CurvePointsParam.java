@@ -6,7 +6,7 @@ import java.util.List;
 
 public final class CurvePointsParam implements ParamSpec<NoiseFunctions.CurveRemap.PointList> {
     public static final CurvePointsParam INSTANCE = new CurvePointsParam();
-    public static final String NAME = "points";
+    private static final String NAME = "points";
 
     private CurvePointsParam() {
     }

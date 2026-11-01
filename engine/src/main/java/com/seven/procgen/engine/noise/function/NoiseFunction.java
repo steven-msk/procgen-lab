@@ -95,7 +95,7 @@ public interface NoiseFunction {
         }
 
         public double get(double x, double y, double z) {
-            if (sampler == null) throw new IllegalStateException("Compute called with null sampler");
+            if (sampler == null) throw new IllegalStateException("Sampler not bound: " + id);
             return sampler.sample(x, y, z);
         }
 
@@ -127,7 +127,7 @@ public interface NoiseFunction {
         RegistryKey<NoiseSamplerProvider<?>> samplerKey, T parameters, @Nullable NoiseCombiner<T> combiner
     ) {
         public double combine(double x, double y, double z) {
-            if (combiner == null) throw new IllegalStateException("Combine called with null combiner");
+            if (combiner == null) throw new IllegalStateException("Combiner not bound: " + id);
             return combiner.compute(x, y, z);
         }
 

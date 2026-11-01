@@ -4,16 +4,9 @@ import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.function.NoiseFunctions;
 import com.seven.procgen.engine.noise.graph.FunctionBuildContext;
 import com.seven.procgen.engine.noise.graph.NodeSpec;
-import com.seven.procgen.engine.noise.graph.NodeSpecs;
-import com.seven.procgen.engine.noise.graph.ParamSpec;
-import com.seven.procgen.engine.registry.Registries;
-import com.seven.procgen.engine.registry.RegistryEntryLookup;
-import com.seven.procgen.engine.registry.RegistryKey;
 import org.jspecify.annotations.Nullable;
 
-import java.lang.reflect.RecordComponent;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public final class EditorGraph {
     static final NodeSpec OUTPUT_SPEC = NodeSpec.of("Output", NodeSpec.Category.OUTPUT, List.of("value"), List.of(), c -> c.pin("value"));
@@ -26,8 +19,8 @@ public final class EditorGraph {
         this.outputId = add(OUTPUT_SPEC, 0, 0).id;
     }
 
-    public static EditorGraph importTree(NoiseFunction function, RegistryEntryLookup.RegistryLookup registryLookup) {
-        return new Importer(function, registryLookup).importTree();
+    public static EditorGraph importTree(NoiseFunction function) {
+        return new Importer(function).importTree();
     }
 
     EditorNode add(NodeSpec spec, float x, float y) {
@@ -106,11 +99,9 @@ public final class EditorGraph {
 
     public static final class Importer {
         private final NoiseFunction root;
-        private final RegistryEntryLookup.RegistryLookup registryLookup;
 
-        private Importer(NoiseFunction root, RegistryEntryLookup.RegistryLookup registryLookup) {
+        private Importer(NoiseFunction root) {
             this.root = root;
-            this.registryLookup = registryLookup;
         }
 
         public EditorGraph importTree() {
@@ -125,55 +116,15 @@ public final class EditorGraph {
             EditorNode existing = made.get(function);
             if (existing != null) return existing;
 
-            RegistryKey<NodeSpec> specKey = NodeSpecs.keyOf(function);
-            NodeSpec spec = registryLookup.getOrThrow(Registries.NODE_SPEC).getOrThrow(specKey).value();
-            EditorNode node = graph.add(spec, 0, 0);
+            NodeSpec.Entry specEntry = NodeSpec.findMatch(function);
+            if (specEntry == null) {
+                throw new IllegalArgumentException("No node spec for " + function.getClass().getSimpleName());
+            }
+            EditorNode node = graph.add(specEntry.registryEntry().value(), 0, 0);
             made.put(function, node);
-
-            Map<String, NoiseFunction> inputs = decompose(function, spec, node.params);
-            inputs.forEach((pin, child) -> graph.connect(importNode(graph, child, made).id, node.id, pin));
+            node.params.putAll(specEntry.decomposed().params());
+            specEntry.decomposed().pins().forEach((pin, child) -> graph.connect(importNode(graph, child, made).id, node.id, pin));
             return node;
-        }
-
-        /// Fills `params` with the function's parameter values and returns its pin -> child function map.
-        /// this is ugly
-        @Deprecated(forRemoval = true)
-        private static Map<String, NoiseFunction> decompose(NoiseFunction function, NodeSpec spec, Map<String, Object> params) {
-            RecordComponent[] components = function.getClass().getRecordComponents();
-            if (components == null) throw new IllegalArgumentException(function.getClass() + " is not a record");
-
-            Set<String> paramNames = spec.params().stream().map(ParamSpec::name).collect(Collectors.toSet());
-            Map<String, NoiseFunction> inputs = new LinkedHashMap<>();
-            for (RecordComponent component : components) {
-                String name = snakeCase(component.getName());
-                Object value;
-                try {
-                    value = component.getAccessor().invoke(function);
-                } catch (ReflectiveOperationException e) {
-                    throw new IllegalStateException("Can't read " + component, e);
-                }
-                if (value instanceof NoiseFunction child) {
-                    if (!spec.inputs().contains(name)) {
-                        throw new IllegalStateException(spec.title() + ": record component '" + component.getName() + "' has no pin '" + name + "'");
-                    }
-                    inputs.put(name, child);
-                } else if (paramNames.contains(name)) {
-                    params.put(name, value);
-                }
-            }
-            for (String pin : spec.inputs()) {
-                if (!inputs.containsKey(pin))
-                    throw new IllegalStateException(spec.title() + ": no record component for pin '" + pin + "'");
-            }
-            for (String param : paramNames) {
-                if (!params.containsKey(param))
-                    throw new IllegalStateException(spec.title() + ": no record component for param '" + param + "'");
-            }
-            return inputs;
-        }
-
-        private static String snakeCase(String camel) {
-            return camel.replaceAll("([a-z0-9])([A-Z])", "$1_$2").toLowerCase(Locale.ROOT);
         }
     }
 }
