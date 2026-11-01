@@ -26,6 +26,10 @@ public final class EditorGraph {
         this.outputId = add(OUTPUT_SPEC, 0, 0).id;
     }
 
+    public static EditorGraph importTree(NoiseFunction function, RegistryEntryLookup.RegistryLookup registryLookup) {
+        return new Importer(function, registryLookup).importTree();
+    }
+
     EditorNode add(NodeSpec spec, float x, float y) {
         EditorNode node = new EditorNode(nextId++, spec, x, y);
         nodes.put(node.id, node);
@@ -100,7 +104,7 @@ public final class EditorGraph {
     record Compiled(@Nullable NoiseFunction root, Map<Integer, NoiseFunction> byNode, Map<Integer, String> errors) {
     }
 
-    public final class Importer {
+    public static final class Importer {
         private final NoiseFunction root;
         private final RegistryEntryLookup.RegistryLookup registryLookup;
 

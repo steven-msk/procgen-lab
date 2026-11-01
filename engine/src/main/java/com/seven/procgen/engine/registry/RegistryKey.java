@@ -42,6 +42,10 @@ public final class RegistryKey<T> {
         return "Key[" + this.registry.toString() + " : " + this.value.toString() + "]";
     }
 
+    public String valueAsString() {
+        return value.toString();
+    }
+
     @Override
     public boolean equals(Object obj) {
         return obj instanceof RegistryKey<?> other

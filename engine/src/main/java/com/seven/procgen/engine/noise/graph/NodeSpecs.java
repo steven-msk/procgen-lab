@@ -32,11 +32,11 @@ public final class NodeSpecs {
         };
     }
 
-    private static RegistryKey<NodeSpec> getUnaryKey(NoiseFunctions.UnaryOperation operation) {
+    public static RegistryKey<NodeSpec> getUnaryKey(NoiseFunctions.UnaryOperation operation) {
         return getKey(operation.name().toLowerCase(Locale.ROOT));
     }
 
-    private static RegistryKey<NodeSpec> getBinaryKey(NoiseFunctions.BinaryOperation operation) {
+    public static RegistryKey<NodeSpec> getBinaryKey(NoiseFunctions.BinaryOperation operation) {
         return getKey(operation.name().toLowerCase(Locale.ROOT));
     }
 

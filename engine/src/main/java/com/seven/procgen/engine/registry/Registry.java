@@ -13,6 +13,8 @@ import com.seven.procgen.engine.noise.combiner.NoiseCombinerProvider;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerType;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.function.NoiseFunctionTypes;
+import com.seven.procgen.engine.noise.graph.NodeSpec;
+import com.seven.procgen.engine.noise.graph.NodeSpecs;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.util.collection.IndexedIterable;
@@ -34,6 +36,7 @@ public final class Registry<T> implements IndexedIterable<T>, RegistryEntryLooku
     public static final Registry<NoiseSamplerProvider<?>> NOISE_SAMPLER_PROVIDER = create(Registries.NOISE_SAMPLER_PROVIDER, NoiseSamplerType::init);
     public static final Registry<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> NOISE_COMBINER_PROVIDER = create(Registries.NOISE_COMBINER_PROVIDER, NoiseCombinerType::init);
     public static final Registry<MapCodec<? extends NoiseFunction>> NOISE_FUNCTION = create(Registries.NOISE_FUNCTION, NoiseFunctionTypes::init);
+    public static final Registry<NodeSpec> NODE_SPEC = create(Registries.NODE_SPEC, NodeSpecs::init);
     private static RegistryEntryLookup.RegistryLookup bootstrapLookup;
     private static final Set<Identifier> LOADED_REGISTRIES = Sets.newHashSet();
     private boolean frozen;

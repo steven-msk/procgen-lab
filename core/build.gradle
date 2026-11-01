@@ -14,8 +14,13 @@ dependencies {
     if (enableGraalNative == 'true') {
         implementation "io.github.berstanio:gdx-svmhelper-annotations:$graalHelperVersion"
     }
+
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.10.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
+
+test { useJUnitPlatform() }
