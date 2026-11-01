@@ -95,7 +95,7 @@ public interface NoiseFunction {
 
         @Override
         public int hashCode() {
-            return Objects.hash(id, providerKey);
+            return Objects.hash(id, providerKey, parameters);
         }
 
         @Override

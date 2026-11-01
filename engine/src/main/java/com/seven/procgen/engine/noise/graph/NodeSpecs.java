@@ -6,7 +6,6 @@ import com.seven.procgen.engine.noise.function.NoiseFunctionTypes;
 import com.seven.procgen.engine.noise.function.NoiseFunctions;
 import com.seven.procgen.engine.registry.*;
 import com.seven.procgen.engine.util.math.Axis;
-import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 import java.util.Locale;
@@ -44,8 +43,6 @@ public final class NodeSpecs {
     private static RegistryKey<NodeSpec> getKey(String id) {
         return RegistryKey.of(Registries.NODE_SPEC, Identifier.of(id));
     }
-
-
 
     private record Bootstrap(Registry<NodeSpec> registry, RegistryEntryLookup.RegistryLookup registryLookup) {
         public NodeSpec init() {
