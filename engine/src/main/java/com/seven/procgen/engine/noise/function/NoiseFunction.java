@@ -2,7 +2,6 @@ package com.seven.procgen.engine.noise.function;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerProvider;
 import com.seven.procgen.engine.noise.sampler.NoiseSampler;
@@ -14,7 +13,6 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -48,22 +46,6 @@ public interface NoiseFunction {
 
     default NoiseFunction clamp(double min, double max) {
         return NoiseFunctions.clamp(this, min, max);
-    }
-
-    static <T extends NoiseFunction> MapCodec<T> unaryCodec(Function<NoiseFunction, T> ctor, Function<T, NoiseFunction> in) {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            NoiseFunction.CODEC.fieldOf("input").forGetter(in)
-        ).apply(i, ctor));
-    }
-
-    static <T extends NoiseFunction> MapCodec<T> binaryCodec(
-        BiFunction<NoiseFunction, NoiseFunction, T> ctor,
-        Function<T, NoiseFunction> a, Function<T, NoiseFunction> b
-    ) {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            NoiseFunction.CODEC.fieldOf("a").forGetter(a),
-            NoiseFunction.CODEC.fieldOf("b").forGetter(b)
-        ).apply(i, ctor));
     }
 
     interface Visitor {
@@ -118,7 +100,10 @@ public interface NoiseFunction {
 
         @Override
         public boolean equals(Object obj) {
-            return obj instanceof SamplerEntry<?> e && id.equals(e.id) && providerKey.equals(e.providerKey);
+            return obj instanceof SamplerEntry<?> e
+                && id.equals(e.id)
+                && providerKey.equals(e.providerKey)
+                && parameters.equals(e.parameters);
         }
     }
 
