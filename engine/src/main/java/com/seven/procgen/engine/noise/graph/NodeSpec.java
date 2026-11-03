@@ -40,8 +40,7 @@ public interface NodeSpec {
         RegistryKey<NodeSpec> key = NodeSpecs.keyOf(function);
         RegistryEntry<NodeSpec> entry = registryLookup.getOptionalEntry(Registries.NODE_SPEC, key).orElseThrow();
         FunctionDecompose decomposed = entry.value().decompose(function);
-        if (decomposed != null) return new NodeSpec.Entry(entry, decomposed);
-        return null;
+        return decomposed == null ? null : new Entry(entry, decomposed);
     }
 
     /// Only the output node should use this as this does not produce FunctionDecomposeContext

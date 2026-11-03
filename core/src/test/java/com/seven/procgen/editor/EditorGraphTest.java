@@ -5,6 +5,8 @@ import com.seven.procgen.engine.noise.function.NoiseFunctionTypes;
 import com.seven.procgen.engine.noise.function.NoiseFunctions;
 import com.seven.procgen.engine.noise.graph.NodeSpec;
 import com.seven.procgen.engine.noise.graph.NodeSpecs;
+import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
+import com.seven.procgen.engine.registry.Identifier;
 import com.seven.procgen.engine.registry.Registry;
 import com.seven.procgen.engine.registry.RegistryKey;
 import com.seven.procgen.engine.util.math.Axis;
@@ -36,6 +38,7 @@ public class EditorGraphTest {
                 .filter(o -> Registry.NODE_SPEC.getOrThrow(o).value().decompose(compiled.root()) != null)
                 .count();
             assertEquals(1, claimants, key.value() + " matched by " + claimants + " specs");
+            assertEquals(NodeSpecs.keyOf(compiled.root()).value(), key.value());
         }
     }
 
@@ -72,6 +75,20 @@ public class EditorGraphTest {
         EditorGraph.Compiled compiled = g.compile();
         Assertions.assertNull(compiled.root());
         assertTrue(compiled.errors().containsKey(node.id));
+    }
+
+    @Test
+    void samplerSpecDefaultsMatchProviderDefaults() {
+        for (RegistryKey<NoiseSamplerProvider<?>> key : Registry.NOISE_SAMPLER_PROVIDER.getKeys()) {
+            Identifier id = key.value();
+            EditorGraph g = new EditorGraph();
+            EditorNode node = g.add(getSpec(NodeSpecs.getSamplerNodeKey(key)), 0, 0);
+            g.connect(node.id, g.outputId, "value");
+
+            var sampler = (NoiseFunctions.Sampler<?>)g.compile().root();
+            Object expected = Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value().defaultParameters();
+            assertEquals(expected, sampler.samplerEntry().parameters(), id.toString());
+        }
     }
 
     private static NodeSpec getSpec(RegistryKey<NodeSpec> key) {

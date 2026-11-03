@@ -1,6 +1,7 @@
 package com.seven.procgen.engine.noise.combiner;
 
 import com.mojang.serialization.Codec;
+import com.seven.procgen.engine.noise.graph.ParameterDescriptor;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.random.RandomSource;
 import com.seven.procgen.engine.registry.Identifier;
@@ -13,10 +14,12 @@ public final class NoiseCombinerType<T extends NoiseCombiner.Parameters> impleme
     public static final RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> RIDGED_MULTIFRACTAL = register("ridged_multifractal");
     private final NoiseCombinerGetter<T> getter;
     private final Codec<T> parametersCodec;
+    private final ParameterDescriptor<T> parameterDescriptor;
 
-    public NoiseCombinerType(NoiseCombinerGetter<T> getter, Codec<T> parametersCodec) {
+    public NoiseCombinerType(NoiseCombinerGetter<T> getter, Codec<T> parametersCodec, ParameterDescriptor<T> parameterDescriptor) {
         this.getter = getter;
         this.parametersCodec = parametersCodec;
+        this.parameterDescriptor = parameterDescriptor;
     }
 
     private static RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> register(String id) {
@@ -24,8 +27,12 @@ public final class NoiseCombinerType<T extends NoiseCombiner.Parameters> impleme
     }
 
     public static NoiseCombinerProvider<?> init(Registry<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> registry) {
-        Registry.register(registry, RIDGED_MULTIFRACTAL, new NoiseCombinerType<>(RidgedMultifractalCombiner::new, RidgedMultifractalCombiner.Parameters.CODEC));
-        return Registry.register(registry, FBM, new NoiseCombinerType<>(FBMCombiner::new, FBMCombiner.Parameters.CODEC));
+        Registry.register(registry, RIDGED_MULTIFRACTAL, new NoiseCombinerType<>(
+            RidgedMultifractalCombiner::new, RidgedMultifractalCombiner.Parameters.CODEC, RidgedMultifractalCombiner.Parameters.DESCRIPTOR
+        ));
+        return Registry.register(registry, FBM, new NoiseCombinerType<>(
+            FBMCombiner::new, FBMCombiner.Parameters.CODEC, FBMCombiner.Parameters.DESCRIPTOR
+        ));
     }
 
     @Override
@@ -36,5 +43,10 @@ public final class NoiseCombinerType<T extends NoiseCombiner.Parameters> impleme
     @Override
     public Codec<T> parametersCodec() {
         return parametersCodec;
+    }
+
+    @Override
+    public ParameterDescriptor<T> parameterDescriptor() {
+        return parameterDescriptor;
     }
 }

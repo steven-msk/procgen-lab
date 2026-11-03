@@ -1,12 +1,18 @@
 package com.seven.procgen.engine.noise.graph;
 
 import com.mojang.serialization.MapCodec;
+import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
+import com.seven.procgen.engine.noise.combiner.NoiseCombinerProvider;
+import com.seven.procgen.engine.noise.combiner.NoiseCombinerType;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.function.NoiseFunctionTypes;
 import com.seven.procgen.engine.noise.function.NoiseFunctions;
+import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
+import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.registry.*;
 import com.seven.procgen.engine.util.math.Axis;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.BiFunction;
@@ -28,6 +34,8 @@ public final class NodeSpecs {
         return switch (function) {
             case NoiseFunctions.UnaryFunction u -> getUnaryKey(u.operation());
             case NoiseFunctions.BinaryFunction b -> getBinaryKey(b.operation());
+            case NoiseFunctions.Sampler<?> s -> getSamplerNodeKey(s.samplerEntry().providerKey());
+            case NoiseFunctions.Combiner<?> c -> getCombinerNodeKey(c.combinerEntry().combinerKey());
             default -> keyOf(Registry.NOISE_FUNCTION.getKey(function.codec()).orElseThrow());
         };
     }
@@ -40,14 +48,41 @@ public final class NodeSpecs {
         return getKey(operation.name().toLowerCase(Locale.ROOT));
     }
 
+    public static RegistryKey<NodeSpec> getSamplerNodeKey(RegistryKey<NoiseSamplerProvider<?>> samplerKey) {
+        return RegistryKey.of(Registries.NODE_SPEC, samplerKey.value());
+    }
+
+    public static RegistryKey<NodeSpec> getCombinerNodeKey(RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> combinerKey) {
+        return RegistryKey.of(Registries.NODE_SPEC, combinerKey.value());
+    }
+
     private static RegistryKey<NodeSpec> getKey(String id) {
         return RegistryKey.of(Registries.NODE_SPEC, Identifier.of(id));
     }
 
     private record Bootstrap(Registry<NodeSpec> registry, RegistryEntryLookup.RegistryLookup registryLookup) {
         public NodeSpec init() {
-            registerUnaryNodes();
-            registerBinaryNodes();
+            registerSampler(NoiseSamplerType.PERLIN, "Perlin Noise", "perlin_sampler");
+            registerSampler(NoiseSamplerType.SIMPLEX, "Simplex Noise", "simplex_sampler");
+            registerSampler(NoiseSamplerType.WORLEY, "Worley Noise", "worley_sampler");
+            registerSampler(NoiseSamplerType.VALUE, "Value Noise", "value_sampler");
+            registerSampler(NoiseSamplerType.WHITE, "White Noise", "white_sampler");
+
+            registerCombiner(NoiseCombinerType.FBM, "Fractal Brownian Motion", "fbm_combiner");
+            registerCombiner(NoiseCombinerType.RIDGED_MULTIFRACTAL, "Ridged Multifractal", "ridged_multifractal_combiner");
+
+            registerUnary(NoiseFunctions.UnaryOperation.ABS, "Abs", NoiseFunctions::abs);
+            registerUnary(NoiseFunctions.UnaryOperation.NEGATE, "Negate", NoiseFunctions::negate);
+            registerUnary(NoiseFunctions.UnaryOperation.SQUARE, "Square", NoiseFunctions::square);
+            registerUnary(NoiseFunctions.UnaryOperation.CUBE, "Cube", NoiseFunctions::cube);
+            registerUnary(NoiseFunctions.UnaryOperation.ONE_MINUS, "One Minus", NoiseFunctions::oneMinus);
+
+            registerBinary(NoiseFunctions.BinaryOperation.ADD, "Add", NoiseFunctions::add);
+            registerBinary(NoiseFunctions.BinaryOperation.SUBTRACT, "Subtract", NoiseFunctions::subtract);
+            registerBinary(NoiseFunctions.BinaryOperation.MULTIPLY, "Multiply", NoiseFunctions::mul);
+            registerBinary(NoiseFunctions.BinaryOperation.MIN, "Min", NoiseFunctions::min);
+            registerBinary(NoiseFunctions.BinaryOperation.MAX, "Max", NoiseFunctions::max);
+
             registerFunction(NoiseFunctionTypes.CLAMP, NodeSpec.of("Clamp", NodeSpec.Category.MATH,
                 List.of("input"),
                 List.of(
@@ -216,20 +251,70 @@ public final class NodeSpecs {
             ));
         }
 
-        private void registerUnaryNodes() {
-            registerUnary(NoiseFunctions.UnaryOperation.ABS, "Abs", NoiseFunctions::abs);
-            registerUnary(NoiseFunctions.UnaryOperation.NEGATE, "Negate", NoiseFunctions::negate);
-            registerUnary(NoiseFunctions.UnaryOperation.SQUARE, "Square", NoiseFunctions::square);
-            registerUnary(NoiseFunctions.UnaryOperation.CUBE, "Cube", NoiseFunctions::cube);
-            registerUnary(NoiseFunctions.UnaryOperation.ONE_MINUS, "One Minus", NoiseFunctions::oneMinus);
+        private void registerSampler(RegistryKey<NoiseSamplerProvider<?>> key, String title, String id) {
+            NoiseSamplerProvider<?> provider = registryLookup.getOrThrow(Registries.NOISE_SAMPLER_PROVIDER).getOrThrow(key).value();
+            register(getSamplerNodeKey(key), samplerSpec(key, title, id, provider));
         }
 
-        private void registerBinaryNodes() {
-            registerBinary(NoiseFunctions.BinaryOperation.ADD, "Add", NoiseFunctions::add);
-            registerBinary(NoiseFunctions.BinaryOperation.SUBTRACT, "Subtract", NoiseFunctions::subtract);
-            registerBinary(NoiseFunctions.BinaryOperation.MULTIPLY, "Multiply", NoiseFunctions::mul);
-            registerBinary(NoiseFunctions.BinaryOperation.MIN, "Min", NoiseFunctions::min);
-            registerBinary(NoiseFunctions.BinaryOperation.MAX, "Max", NoiseFunctions::max);
+        private void registerCombiner(RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> key, String title, String id) {
+            NoiseCombinerProvider<? extends NoiseCombiner.Parameters> provider = registryLookup.getOrThrow(Registries.NOISE_COMBINER_PROVIDER).getOrThrow(key).value();
+            register(getCombinerNodeKey(key), combinerSpec(key, title, id, provider));
+        }
+
+        @SuppressWarnings("unchecked")
+        private static <T> NodeSpec samplerSpec(RegistryKey<NoiseSamplerProvider<?>> key, String title, String id, NoiseSamplerProvider<T> provider) {
+            ParameterDescriptor<T> paramDescriptor = provider.parameterDescriptor();
+            List<ParamSpec<?>> params = new ArrayList<>();
+            params.add(ParamSpec.uniqueString("id", id));
+            params.addAll(paramDescriptor.specs());
+            axisScales(params);
+            return NodeSpec.of(title, NodeSpec.Category.NOISE, List.of(), params,
+                c -> NoiseFunctions.createSampler(
+                    c.param("id"), key, paramDescriptor.create(c),
+                    c.param("scale_x"), c.param("scale_y"), c.param("scale_z")
+                ),
+                (Class<NoiseFunctions.Sampler<?>>)(Class<?>)NoiseFunctions.Sampler.class,
+                f -> {
+                    NoiseFunction.SamplerEntry<?> entry = f.samplerEntry();
+                    if (!entry.providerKey().equals(key)) return null; // some other sampler spec's function
+                    T parameters = (T)entry.parameters();
+                    return paramDescriptor.decompose(parameters)
+                        .param("id", entry.id().toString())
+                        .param("scale_x", f.xScale())
+                        .param("scale_y", f.yScale())
+                        .param("scale_z", f.zScale());
+                }
+            );
+        }
+
+        @SuppressWarnings("unchecked")
+        private static <T extends NoiseCombiner.Parameters> NodeSpec combinerSpec(
+            RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> key, String title, String id, NoiseCombinerProvider<T> provider
+        ) {
+            ParameterDescriptor<T> paramDescriptor = provider.parameterDescriptor();
+            List<ParamSpec<?>> params = new ArrayList<>();
+            params.add(ParamSpec.uniqueString("id", id));
+            params.add(SamplerKeyParam.INSTANCE);
+            params.addAll(paramDescriptor.specs());
+            axisScales(params);
+            return NodeSpec.of(title, NodeSpec.Category.NOISE, List.of(), params,
+                c -> NoiseFunctions.createCombiner(
+                    c.param("id"), key, c.param(SamplerKeyParam.INSTANCE.name()), paramDescriptor.create(c),
+                    c.param("scale_x"), c.param("scale_y"), c.param("scale_z")
+                ),
+                (Class<NoiseFunctions.Combiner<?>>)(Class<?>)NoiseFunctions.Combiner.class,
+                f -> {
+                    NoiseFunction.CombinerEntry<?> entry = f.combinerEntry();
+                    if (!entry.combinerKey().equals(key)) return null;
+                    T parameters = (T)entry.parameters();
+                    return paramDescriptor.decompose(parameters)
+                        .param("id", entry.id().toString())
+                        .param(SamplerKeyParam.INSTANCE.name(), entry.samplerKey())
+                        .param("scale_x", f.xScale())
+                        .param("scale_y", f.yScale())
+                        .param("scale_z", f.zScale());
+                }
+            );
         }
 
         private void registerUnary(NoiseFunctions.UnaryOperation operation, String name, Function<NoiseFunction, NoiseFunction> factory) {
@@ -259,6 +344,12 @@ public final class NodeSpecs {
 
         private NodeSpec register(RegistryKey<NodeSpec> key, NodeSpec spec) {
             return Registry.register(registry, key, spec);
+        }
+
+        private static void axisScales(List<ParamSpec<?>> params) {
+            params.add(ParamSpec.unboundedDouble("scale_x", 1.0d));
+            params.add(ParamSpec.unboundedDouble("scale_y", 1.0d));
+            params.add(ParamSpec.unboundedDouble("scale_z", 1.0d));
         }
     }
 }

@@ -2,6 +2,7 @@ package com.seven.procgen.engine.noise.sampler;
 
 import com.mojang.datafixers.util.Unit;
 import com.mojang.serialization.Codec;
+import com.seven.procgen.engine.noise.graph.ParameterDescriptor;
 import com.seven.procgen.engine.registry.Identifier;
 import com.seven.procgen.engine.registry.Registries;
 import com.seven.procgen.engine.registry.Registry;
@@ -19,6 +20,7 @@ public final class NoiseSamplerType<T> implements NoiseSamplerProvider<T> {
     private final BiFunction<Long, T, NoiseSampler> samplerFunction;
     private final Codec<T> parametersCodec;
     private final T defaultParameters;
+    private final ParameterDescriptor<T> parameterDescriptor;
 
     private static RegistryKey<NoiseSamplerProvider<?>> register(String id) {
         return RegistryKey.of(Registries.NOISE_SAMPLER_PROVIDER, Identifier.of(id));
@@ -28,22 +30,30 @@ public final class NoiseSamplerType<T> implements NoiseSamplerProvider<T> {
         Registry.register(registry, PERLIN, parameterless(PerlinNoise::new));
         Registry.register(registry, VALUE, parameterless(ValueNoise::new));
         Registry.register(registry, SIMPLEX, parameterless(SimplexNoise::new));
-        Registry.register(registry, WORLEY, parametrized(WorleyNoise::new, WorleyNoise.Parameters.CODEC, WorleyNoise.Parameters.DEFAULT));
+        Registry.register(registry, WORLEY, parametrized(WorleyNoise::new,
+            WorleyNoise.Parameters.CODEC, WorleyNoise.Parameters.DEFAULT,
+            WorleyNoise.Parameters.DESCRIPTOR
+        ));
         return Registry.register(registry, WHITE, parameterless(WhiteNoise::new));
     }
 
     private static NoiseSamplerType<Unit> parameterless(LongFunction<NoiseSampler> factory) {
-        return new NoiseSamplerType<>((seed, unit) -> factory.apply(seed), Codec.unit(Unit.INSTANCE), Unit.INSTANCE);
+        return new NoiseSamplerType<>((seed, u) -> factory.apply(seed), Codec.unit(Unit.INSTANCE), Unit.INSTANCE, ParameterDescriptor.none(Unit.INSTANCE));
     }
 
-    private static <T> NoiseSamplerType<T> parametrized(BiFunction<Long, T, NoiseSampler> factory, Codec<T> parametersCodec, T defaultParameters) {
-        return new NoiseSamplerType<>(factory, parametersCodec, defaultParameters);
+    private static <T> NoiseSamplerType<T> parametrized(
+        BiFunction<Long, T, NoiseSampler> factory, Codec<T> parametersCodec, T defaultParameters, ParameterDescriptor<T> parameterDescriptor
+    ) {
+        return new NoiseSamplerType<>(factory, parametersCodec, defaultParameters, parameterDescriptor);
     }
 
-    private NoiseSamplerType(BiFunction<Long, T, NoiseSampler> samplerFunction, Codec<T> parametersCodec, T defaultParameters) {
+    private NoiseSamplerType(
+        BiFunction<Long, T, NoiseSampler> samplerFunction, Codec<T> parametersCodec, T defaultParameters, ParameterDescriptor<T> parameterDescriptor
+    ) {
         this.samplerFunction = samplerFunction;
         this.parametersCodec = parametersCodec;
         this.defaultParameters = defaultParameters;
+        this.parameterDescriptor = parameterDescriptor;
     }
 
     @Override
@@ -59,5 +69,10 @@ public final class NoiseSamplerType<T> implements NoiseSamplerProvider<T> {
     @Override
     public T defaultParameters() {
         return defaultParameters;
+    }
+
+    @Override
+    public ParameterDescriptor<T> parameterDescriptor() {
+        return parameterDescriptor;
     }
 }

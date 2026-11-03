@@ -2,13 +2,21 @@ package com.seven.procgen.engine.noise.combiner;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.seven.procgen.engine.noise.graph.FunctionDecompose;
+import com.seven.procgen.engine.noise.graph.ParamSpec;
+import com.seven.procgen.engine.noise.graph.ParameterDescriptor;
 import com.seven.procgen.engine.noise.sampler.NoiseSampler;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
 import com.seven.procgen.engine.random.RandomFork;
 import com.seven.procgen.engine.random.RandomSource;
 import com.seven.procgen.engine.util.math.NoiseMath;
 import com.seven.procgen.engine.util.serialization.Codecs;
+import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
 public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
     public static final double DEFAULT_LACUNARITY = 2.0d;
@@ -20,11 +28,11 @@ public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
     private final double lowestFreqValueFactor;
     private final double lowestFreqInputFactor;
 
-    public FBMCombiner(RandomSource random, NoiseSamplerProvider samplerProvider, Parameters parameters) {
+    public FBMCombiner(RandomSource random, NoiseSamplerProvider<?> samplerProvider, Parameters parameters) {
         this(random, samplerProvider, "", parameters);
     }
 
-    public FBMCombiner(RandomSource random, NoiseSamplerProvider samplerProvider, String salt, Parameters parameters) {
+    public FBMCombiner(RandomSource random, NoiseSamplerProvider<?> samplerProvider, String salt, Parameters parameters) {
         super(random, samplerProvider, parameters);
         this.octaveMultipliers = parameters.octaveMultipliers;
         this.lacunarity = parameters.lacunarity;
@@ -71,6 +79,27 @@ public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
             Codec.DOUBLE.fieldOf("lacunarity").forGetter(Parameters::lacunarity),
             Codec.DOUBLE.fieldOf("persistence").forGetter(Parameters::persistence)
         ).apply(i, Parameters::new));
+        public static final ParameterDescriptor<Parameters> DESCRIPTOR = ParameterDescriptor.of(
+            List.of(
+                ParamSpec.rangedInt("first_octave", -5, -20, 20),
+                ParamSpec.doubleArray("octave_multipliers", new double[]{1.0d, 1.0d, 1.0d}, 1, 16),
+                ParamSpec.rangedDouble("lacunarity", DEFAULT_LACUNARITY, 1.0d, 8.0d),
+                ParamSpec.rangedDouble("persistence", DEFAULT_PERSISTENCE, 0.0d, 1.0d)
+            ),
+            c -> new Parameters(
+                c.param("first_octave"), c.param("octave_multipliers"),
+                c.param("lacunarity"), c.param("persistence")
+            ),
+            p -> FunctionDecompose.of()
+                .param("first_octave", p.firstOctave())
+                .param("octave_multipliers", p.octaveMultipliers().clone())
+                .param("lacunarity", p.lacunarity())
+                .param("persistence", p.persistence())
+        );
+
+        public Parameters {
+            octaveMultipliers = octaveMultipliers.clone();
+        }
 
         public static Parameters of(int firstOctave, double... octaveMultipliers) {
             return new Parameters(firstOctave, octaveMultipliers, DEFAULT_LACUNARITY, DEFAULT_PERSISTENCE);
@@ -82,6 +111,26 @@ public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
 
         public Parameters persistence(double persistence) {
             return new Parameters(firstOctave, octaveMultipliers, lacunarity, persistence);
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            return obj instanceof Parameters(int otherFirstOctave, double[] otherMultipliers, double otherLacunarity, double otherPersistence)
+                && firstOctave == otherFirstOctave
+                && Arrays.equals(octaveMultipliers, otherMultipliers)
+                && Double.compare(lacunarity, otherLacunarity) == 0
+                && Double.compare(persistence, otherPersistence) == 0;
+        }
+
+        @Override
+        public int hashCode() {
+            return 31 * Objects.hash(firstOctave, lacunarity, persistence) + Arrays.hashCode(octaveMultipliers);
+        }
+
+        @Override
+        public @NonNull String toString() {
+            return "Parameters[firstOctave=" + firstOctave + ", octaveMultipliers=" + Arrays.toString(octaveMultipliers)
+                + ", lacunarity=" + lacunarity + ", persistence=" + persistence + "]";
         }
     }
 }
