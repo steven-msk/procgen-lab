@@ -230,11 +230,6 @@ public final class NoiseFunctions {
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
         }
-
-        @Override
-        public @NonNull String toString() {
-            return "Sampler[\"" + samplerEntry + "\", xScale=" + xScale + ", yScale=" + yScale + ", zScale=" + zScale + "]";
-        }
     }
 
     public record Combiner<T extends NoiseCombiner.Parameters>(NoiseFunction.@NonNull CombinerEntry<T> combinerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
@@ -275,11 +270,6 @@ public final class NoiseFunctions {
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
         }
-
-        @Override
-        public @NonNull String toString() {
-            return "Combiner[\"" + combinerEntry + "\", xScale=" + xScale + ", yScale=" + yScale + ", zScale=" + zScale + "]";
-        }
     }
 
     public record Constant(double value) implements NoiseFunction {
@@ -305,11 +295,6 @@ public final class NoiseFunctions {
         @Override
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
-        }
-
-        @Override
-        public @NonNull String toString() {
-            return "Constant[" + value + "]";
         }
     }
 
