@@ -27,7 +27,7 @@ public final class NoiseCombinerType<T extends NoiseCombiner.Parameters> impleme
     }
 
     private static RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> register(String id) {
-        return RegistryKey.of(Registries.NOISE_COMBINER_PROVIDER, Identifier.of(id));
+        return RegistryKey.of(Registries.NOISE_COMBINER, Identifier.of(id));
     }
 
     public static NoiseCombinerProvider<?> init(Registry<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> registry) {

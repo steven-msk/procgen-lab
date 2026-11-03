@@ -7,8 +7,8 @@ import com.seven.procgen.engine.registry.Registry;
 import com.seven.procgen.engine.registry.RegistryKey;
 
 public interface NoiseCombinerProvider<T extends NoiseCombiner.Parameters> extends NoiseCombinerGetter<T> {
-    Codec<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> CODEC = Registry.NOISE_COMBINER_PROVIDER.byNameCodec();
-    Codec<RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>>> KEY_CODEC = RegistryKey.codec(Registries.NOISE_COMBINER_PROVIDER);
+    Codec<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> CODEC = Registry.NOISE_COMBINER.byNameCodec();
+    Codec<RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>>> KEY_CODEC = RegistryKey.codec(Registries.NOISE_COMBINER);
 
     Codec<T> parametersCodec();
 

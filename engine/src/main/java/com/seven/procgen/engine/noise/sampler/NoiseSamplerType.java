@@ -23,7 +23,7 @@ public final class NoiseSamplerType<T> implements NoiseSamplerProvider<T> {
     private final ParameterDescriptor<T> parameterDescriptor;
 
     private static RegistryKey<NoiseSamplerProvider<?>> register(String id) {
-        return RegistryKey.of(Registries.NOISE_SAMPLER_PROVIDER, Identifier.of(id));
+        return RegistryKey.of(Registries.NOISE_SAMPLER, Identifier.of(id));
     }
 
     public static NoiseSamplerProvider<?> init(Registry<NoiseSamplerProvider<?>> registry) {

@@ -252,12 +252,12 @@ public final class NodeSpecs {
         }
 
         private void registerSampler(RegistryKey<NoiseSamplerProvider<?>> key, String title, String id) {
-            NoiseSamplerProvider<?> provider = registryLookup.getOrThrow(Registries.NOISE_SAMPLER_PROVIDER).getOrThrow(key).value();
+            NoiseSamplerProvider<?> provider = registryLookup.getOrThrow(Registries.NOISE_SAMPLER).getOrThrow(key).value();
             register(getSamplerNodeKey(key), samplerSpec(key, title, id, provider));
         }
 
         private void registerCombiner(RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> key, String title, String id) {
-            NoiseCombinerProvider<? extends NoiseCombiner.Parameters> provider = registryLookup.getOrThrow(Registries.NOISE_COMBINER_PROVIDER).getOrThrow(key).value();
+            NoiseCombinerProvider<? extends NoiseCombiner.Parameters> provider = registryLookup.getOrThrow(Registries.NOISE_COMBINER).getOrThrow(key).value();
             register(getCombinerNodeKey(key), combinerSpec(key, title, id, provider));
         }
 

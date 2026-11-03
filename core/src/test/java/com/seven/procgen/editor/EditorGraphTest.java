@@ -81,28 +81,28 @@ public class EditorGraphTest {
 
     @Test
     void samplerSpecDefaultsMatchProviderDefaults() {
-        for (RegistryKey<NoiseSamplerProvider<?>> key : Registry.NOISE_SAMPLER_PROVIDER.getKeys()) {
+        for (RegistryKey<NoiseSamplerProvider<?>> key : Registry.NOISE_SAMPLER.getKeys()) {
             Identifier id = key.value();
             EditorGraph g = new EditorGraph();
             EditorNode node = g.add(getSpec(NodeSpecs.getSamplerNodeKey(key)), 0, 0);
             g.connect(node.id, g.outputId, "value");
 
             var sampler = (NoiseFunctions.Sampler<?>)g.compile().root();
-            Object expected = Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value().defaultParameters();
+            Object expected = Registry.NOISE_SAMPLER.getOrThrow(key).value().defaultParameters();
             assertEquals(expected, sampler.samplerEntry().parameters(), id.toString());
         }
     }
 
     @Test
     void combinerSpecDefaultsMatchProviderDefaults() {
-        for (RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> key : Registry.NOISE_COMBINER_PROVIDER.getKeys()) {
+        for (RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> key : Registry.NOISE_COMBINER.getKeys()) {
             Identifier id = key.value();
             EditorGraph g = new EditorGraph();
             EditorNode node = g.add(getSpec(NodeSpecs.getCombinerNodeKey(key)), 0, 0);
             g.connect(node.id, g.outputId, "value");
 
             var combiner = (NoiseFunctions.Combiner<?>)g.compile().root();
-            Object expected = Registry.NOISE_COMBINER_PROVIDER.getOrThrow(key).value().defaultParameters();
+            Object expected = Registry.NOISE_COMBINER.getOrThrow(key).value().defaultParameters();
             assertEquals(expected, combiner.combinerEntry().parameters(), id.toString());
         }
     }

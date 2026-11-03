@@ -7,8 +7,8 @@ import com.seven.procgen.engine.registry.Registry;
 import com.seven.procgen.engine.registry.RegistryKey;
 
 public interface NoiseSamplerProvider<T> {
-    Codec<NoiseSamplerProvider<?>> CODEC = Registry.NOISE_SAMPLER_PROVIDER.byNameCodec();
-    Codec<RegistryKey<NoiseSamplerProvider<?>>> KEY_CODEC = RegistryKey.codec(Registries.NOISE_SAMPLER_PROVIDER);
+    Codec<NoiseSamplerProvider<?>> CODEC = Registry.NOISE_SAMPLER.byNameCodec();
+    Codec<RegistryKey<NoiseSamplerProvider<?>>> KEY_CODEC = RegistryKey.codec(Registries.NOISE_SAMPLER);
 
     NoiseSampler getSampler(long seed, T parameters);
 

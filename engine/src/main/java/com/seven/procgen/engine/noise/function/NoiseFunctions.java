@@ -29,7 +29,7 @@ public final class NoiseFunctions {
     }
 
     public static NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider<?>> key, double xScale, double yScale, double zScale) {
-        return withDefaults(id, key, Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value(), xScale, yScale, zScale);
+        return withDefaults(id, key, Registry.NOISE_SAMPLER.getOrThrow(key).value(), xScale, yScale, zScale);
     }
 
     private static <T> NoiseFunction withDefaults(String id, RegistryKey<NoiseSamplerProvider<?>> key, NoiseSamplerProvider<T> provider, double sx, double sy, double sz) {
@@ -204,7 +204,7 @@ public final class NoiseFunctions {
 
         @SuppressWarnings("unchecked")
         private static <T> MapCodec<SamplerEntry<T>> entryCodec(RegistryKey<NoiseSamplerProvider<?>> key) {
-            NoiseSamplerProvider<T> provider = (NoiseSamplerProvider<T>)Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value();
+            NoiseSamplerProvider<T> provider = (NoiseSamplerProvider<T>)Registry.NOISE_SAMPLER.getOrThrow(key).value();
             return RecordCodecBuilder.mapCodec(i -> i.group(
                 Identifier.CODEC.fieldOf("id").forGetter(SamplerEntry::id),
                 provider.parametersCodec().optionalFieldOf("parameters", provider.defaultParameters()).forGetter(SamplerEntry::parameters)
@@ -248,7 +248,7 @@ public final class NoiseFunctions {
 
         @SuppressWarnings("unchecked")
         private static <T extends NoiseCombiner.Parameters> MapCodec<CombinerEntry<T>> entryCodec(RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> provider) {
-            Codec<T> parametersCodec = (Codec<T>)Registry.NOISE_COMBINER_PROVIDER.getOrThrow(provider).value().parametersCodec();
+            Codec<T> parametersCodec = (Codec<T>)Registry.NOISE_COMBINER.getOrThrow(provider).value().parametersCodec();
             return RecordCodecBuilder.mapCodec(i -> i.group(
                 Identifier.CODEC.fieldOf("id").forGetter(CombinerEntry::id),
                 NoiseSamplerProvider.KEY_CODEC.fieldOf("sampler").forGetter(CombinerEntry::samplerKey),

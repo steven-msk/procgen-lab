@@ -83,7 +83,7 @@ public interface NoiseFunction {
 
         @SuppressWarnings("unchecked")
         public SamplerEntry<T> bind(RandomFork fork, RegistryEntryLookup.RegistryLookup registryLookup) {
-            NoiseSamplerProvider<T> provider = (NoiseSamplerProvider<T>)registryLookup.getOrThrow(Registries.NOISE_SAMPLER_PROVIDER).getOrThrow(providerKey).value();
+            NoiseSamplerProvider<T> provider = (NoiseSamplerProvider<T>)registryLookup.getOrThrow(Registries.NOISE_SAMPLER).getOrThrow(providerKey).value();
             RandomSource random = fork.fromHashOf(id.toString());
             return new SamplerEntry<>(id, providerKey, parameters, provider.getSampler(random.nextLong()));
         }
@@ -118,8 +118,8 @@ public interface NoiseFunction {
 
         @SuppressWarnings("unchecked")
         public CombinerEntry<T> bind(RandomFork fork, RegistryEntryLookup.RegistryLookup registryLookup) {
-            NoiseSamplerProvider<?> sampler = registryLookup.getOrThrow(Registries.NOISE_SAMPLER_PROVIDER).getOrThrow(samplerKey).value();
-            NoiseCombinerProvider<T> combiner = (NoiseCombinerProvider<T>)registryLookup.getOrThrow(Registries.NOISE_COMBINER_PROVIDER).getOrThrow(combinerKey).value();
+            NoiseSamplerProvider<?> sampler = registryLookup.getOrThrow(Registries.NOISE_SAMPLER).getOrThrow(samplerKey).value();
+            NoiseCombinerProvider<T> combiner = (NoiseCombinerProvider<T>)registryLookup.getOrThrow(Registries.NOISE_COMBINER).getOrThrow(combinerKey).value();
             RandomSource random = fork.fromHashOf(id.toString());
             return new CombinerEntry<>(id, combinerKey, samplerKey, parameters, combiner.getCombiner(random, sampler, parameters));
         }
