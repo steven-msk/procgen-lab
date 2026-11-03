@@ -21,6 +21,8 @@ import java.util.Objects;
 public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
     public static final double DEFAULT_LACUNARITY = 2.0d;
     public static final double DEFAULT_PERSISTENCE = 0.5d;
+    public static final int DEFAULT_FIRST_OCTAVE = -5;
+    public static final double[] DEFAULT_OCTAVES = new double[]{1.0d, 1.0d, 1.0d};
     private final @Nullable NoiseSampler[] samplerLevels;
     private final double[] octaveMultipliers;
     private final double lacunarity;
@@ -81,8 +83,8 @@ public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
         ).apply(i, Parameters::new));
         public static final ParameterDescriptor<Parameters> DESCRIPTOR = ParameterDescriptor.of(
             List.of(
-                ParamSpec.rangedInt("first_octave", -5, -20, 20),
-                ParamSpec.doubleArray("octave_multipliers", new double[]{1.0d, 1.0d, 1.0d}, 1, 16),
+                ParamSpec.rangedInt("first_octave", DEFAULT_FIRST_OCTAVE, -20, 20),
+                ParamSpec.doubleArray("octave_multipliers", DEFAULT_OCTAVES, 1, 16),
                 ParamSpec.rangedDouble("lacunarity", DEFAULT_LACUNARITY, 1.0d, 8.0d),
                 ParamSpec.rangedDouble("persistence", DEFAULT_PERSISTENCE, 0.0d, 1.0d)
             ),
@@ -95,6 +97,9 @@ public final class FBMCombiner extends NoiseCombiner<FBMCombiner.Parameters> {
                 .param("octave_multipliers", p.octaveMultipliers().clone())
                 .param("lacunarity", p.lacunarity())
                 .param("persistence", p.persistence())
+        );
+        public static final Parameters DEFAULT = new Parameters(
+            DEFAULT_FIRST_OCTAVE, DEFAULT_OCTAVES, DEFAULT_LACUNARITY, DEFAULT_PERSISTENCE
         );
 
         public Parameters {

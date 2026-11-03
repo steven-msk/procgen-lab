@@ -1,7 +1,14 @@
 package com.seven.procgen.engine.noise.graph;
 
+import com.seven.procgen.engine.noise.function.NoiseFunctions;
+import com.seven.procgen.engine.noise.sampler.NoiseSamplerProvider;
+import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
+import com.seven.procgen.engine.registry.RegistryKey;
+
+import java.util.List;
+
 public interface ParamSpec<T> {
-    String name();
+    String paramName();
 
     T defaultValue();
 
@@ -46,7 +53,7 @@ public interface ParamSpec<T> {
         return new Simple<>(name, defaultValue);
     }
 
-    record DoubleSpec(String name, Double defaultValue, double minInclusive, double maxInclusive) implements ParamSpec<Double> {
+    record DoubleSpec(String paramName, Double defaultValue, double minInclusive, double maxInclusive) implements ParamSpec<Double> {
         public DoubleSpec {
             if (defaultValue < minInclusive)
                 throw new IllegalArgumentException("default value < minInclusive: " + defaultValue + " < " + minInclusive);
@@ -55,7 +62,7 @@ public interface ParamSpec<T> {
         }
     }
 
-    record IntSpec(String name, Integer defaultValue, int minInclusive, int maxInclusive) implements ParamSpec<Integer> {
+    record IntSpec(String paramName, Integer defaultValue, int minInclusive, int maxInclusive) implements ParamSpec<Integer> {
         public IntSpec {
             if (defaultValue < minInclusive)
                 throw new IllegalArgumentException("default value < minInclusive: " + defaultValue + " < " + minInclusive);
@@ -64,21 +71,21 @@ public interface ParamSpec<T> {
         }
     }
 
-    record EnumSpec<E extends Enum<E>>(String name, E defaultValue) implements ParamSpec<E> {
+    record EnumSpec<E extends Enum<E>>(String paramName, E defaultValue) implements ParamSpec<E> {
     }
 
-    record Simple<T>(String name, T defaultValue) implements ParamSpec<T> {
+    record Simple<T>(String paramName, T defaultValue) implements ParamSpec<T> {
     }
 
     /// Default is `prefix_<nodeId>`, so two nodes in one graph don't silently share a seed
-    record StringSpec(String name, String defaultValue, boolean unique) implements ParamSpec<String> {
+    record StringSpec(String paramName, String defaultValue, boolean unique) implements ParamSpec<String> {
         @Override
         public String defaultFor(int nodeId) {
             return unique ? defaultValue + "_" + nodeId : defaultValue;
         }
     }
 
-    record DoubleArraySpec(String name, double[] defaultValue, int minLength, int maxLength) implements ParamSpec<double[]> {
+    record DoubleArraySpec(String paramName, double[] defaultValue, int minLength, int maxLength) implements ParamSpec<double[]> {
         public DoubleArraySpec {
             if (minLength < 1 || maxLength < minLength)
                 throw new IllegalArgumentException("bad length range: " + minLength + ".." + maxLength);
@@ -90,6 +97,53 @@ public interface ParamSpec<T> {
         @Override
         public double[] defaultValue() {
             return defaultValue.clone();
+        }
+    }
+
+    enum SamplerKey implements ParamSpec<RegistryKey<NoiseSamplerProvider<?>>> {
+        INSTANCE("sampler", NoiseSamplerType.PERLIN);
+
+        private final String name;
+        private final RegistryKey<NoiseSamplerProvider<?>> defaultValue;
+
+        SamplerKey(String name, RegistryKey<NoiseSamplerProvider<?>> defaultValue) {
+            this.name = name;
+            this.defaultValue = defaultValue;
+        }
+
+        @Override
+        public String paramName() {
+            return name;
+        }
+
+        @Override
+        public RegistryKey<NoiseSamplerProvider<?>> defaultValue() {
+            return defaultValue;
+        }
+    }
+
+    enum CurvePoints implements ParamSpec<NoiseFunctions.CurveRemap.PointList> {
+        INSTANCE("points", new NoiseFunctions.CurveRemap.PointList(List.of(
+            NoiseFunctions.CurveRemap.Point.of(-1.0d, -1.0d),
+            NoiseFunctions.CurveRemap.Point.of(1.0d, 1.0d))
+        ));
+
+        private final String name;
+        private final NoiseFunctions.CurveRemap.PointList defaultValue;
+
+        CurvePoints(String name, NoiseFunctions.CurveRemap.PointList defaultValue) {
+            this.name = name;
+            this.defaultValue = defaultValue;
+        }
+
+        @Override
+        public String paramName() {
+            return name;
+        }
+
+        @Override
+        public NoiseFunctions.CurveRemap.PointList defaultValue() {
+            return defaultValue;
         }
     }
 }

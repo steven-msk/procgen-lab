@@ -14,6 +14,12 @@ import com.seven.procgen.engine.util.math.NoiseMath;
 import java.util.List;
 
 public final class RidgedMultifractalCombiner extends NoiseCombiner<RidgedMultifractalCombiner.Parameters> {
+    public static final int DEFAULT_OCTAVES = 6;
+    public static final double DEFAULT_FREQUENCY = 1.0d;
+    public static final double DEFAULT_LACUNARITY = 2.0d;
+    public static final double DEFAULT_PERSISTENCE = 0.5d;
+    public static final double DEFAULT_GAIN = 2.0d;
+    public static final double DEFAULT_OFFSET = 1.0d;
     private final NoiseSampler[] samplers;
     private final double[] amplitudes;
     private final double frequency;
@@ -80,18 +86,18 @@ public final class RidgedMultifractalCombiner extends NoiseCombiner<RidgedMultif
             Codec.INT.fieldOf("octaves").forGetter(Parameters::octaves),
             Codec.DOUBLE.fieldOf("frequency").forGetter(Parameters::frequency),
             Codec.DOUBLE.fieldOf("lacunarity").forGetter(Parameters::lacunarity),
-            Codec.DOUBLE.fieldOf("persistence").forGetter(Parameters::persistence),
+            Codec.doubleRange(0.0d, 1.0d).fieldOf("persistence").forGetter(Parameters::persistence),
             Codec.DOUBLE.fieldOf("gain").forGetter(Parameters::gain),
             Codec.DOUBLE.fieldOf("offset").forGetter(Parameters::offset)
         ).apply(i, Parameters::new));
         public static final ParameterDescriptor<Parameters> DESCRIPTOR = ParameterDescriptor.of(
             List.of(
-                ParamSpec.rangedInt("octaves", 6, 1, 16),
-                ParamSpec.rangedDouble("frequency", 1.0d, 0.0d, 64.0d),
-                ParamSpec.rangedDouble("lacunarity", 2.0d, 1.0d, 8.0d),
-                ParamSpec.rangedDouble("persistence", 0.5d, 0.0d, 1.0d),
-                ParamSpec.rangedDouble("gain", 2.0d, 0.0d, 8.0d),
-                ParamSpec.rangedDouble("offset", 1.0d, 0.0d, 4.0d)
+                ParamSpec.rangedInt("octaves", DEFAULT_OCTAVES, 1, 16),
+                ParamSpec.rangedDouble("frequency", DEFAULT_FREQUENCY, 0.0d, 64.0d),
+                ParamSpec.rangedDouble("lacunarity", DEFAULT_LACUNARITY, 1.0d, 8.0d),
+                ParamSpec.rangedDouble("persistence", DEFAULT_PERSISTENCE, 0.0d, 1.0d),
+                ParamSpec.rangedDouble("gain", DEFAULT_GAIN, 0.0d, 8.0d),
+                ParamSpec.rangedDouble("offset", DEFAULT_OFFSET, 0.0d, 4.0d)
             ),
             c -> new Parameters(
                 c.param("octaves"), c.param("frequency"), c.param("lacunarity"),
@@ -104,6 +110,9 @@ public final class RidgedMultifractalCombiner extends NoiseCombiner<RidgedMultif
                 .param("persistence", p.persistence())
                 .param("gain", p.gain())
                 .param("offset", p.offset())
+        );
+        public static final Parameters DEFAULT = new Parameters(
+            DEFAULT_OCTAVES, DEFAULT_FREQUENCY, DEFAULT_LACUNARITY, DEFAULT_PERSISTENCE, DEFAULT_GAIN, DEFAULT_OFFSET
         );
 
         public static Parameters of(int octaves, double frequency, double lacunarity, double persistence, double gain, double offset) {

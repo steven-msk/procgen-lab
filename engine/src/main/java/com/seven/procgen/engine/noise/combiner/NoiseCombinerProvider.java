@@ -13,4 +13,6 @@ public interface NoiseCombinerProvider<T extends NoiseCombiner.Parameters> exten
     Codec<T> parametersCodec();
 
     ParameterDescriptor<T> parameterDescriptor();
+
+    T defaultParameters();
 }

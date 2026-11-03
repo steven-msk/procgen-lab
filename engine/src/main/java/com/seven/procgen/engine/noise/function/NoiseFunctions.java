@@ -194,7 +194,7 @@ public final class NoiseFunctions {
         return select(selector, threshold, 0.0d, above, below);
     }
 
-    public record Sampler<T>(NoiseFunction.SamplerEntry<T> samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
+    public record Sampler<T>(NoiseFunction.@NonNull SamplerEntry<T> samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
         public static final MapCodec<Sampler<?>> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NoiseSamplerProvider.KEY_CODEC.<SamplerEntry<?>>dispatchMap("sampler", SamplerEntry::providerKey, Sampler::entryCodec).forGetter(Sampler::samplerEntry),
             Codec.DOUBLE.fieldOf("scale_x").forGetter(Sampler::xScale),
@@ -237,7 +237,7 @@ public final class NoiseFunctions {
         }
     }
 
-    public record Combiner<T extends NoiseCombiner.Parameters>(NoiseFunction.CombinerEntry<T> combinerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
+    public record Combiner<T extends NoiseCombiner.Parameters>(NoiseFunction.@NonNull CombinerEntry<T> combinerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
         public static final MapCodec<Combiner<? extends NoiseCombiner.Parameters>> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NoiseCombinerProvider.KEY_CODEC.<CombinerEntry<?>>dispatchMap("combiner", CombinerEntry::combinerKey, Combiner::entryCodec)
                 .fieldOf("combiner").forGetter(Combiner::combinerEntry),

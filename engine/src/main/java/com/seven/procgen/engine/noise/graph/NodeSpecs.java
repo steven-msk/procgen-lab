@@ -221,10 +221,10 @@ public final class NodeSpecs {
             ));
             registerFunction(NoiseFunctionTypes.CURVE_REMAP, NodeSpec.of("Curve Remap", NodeSpec.Category.REMAP,
                 List.of("input"),
-                List.of(CurvePointsParam.INSTANCE),
-                c -> NoiseFunctions.curveRemapWithPoints(c.pin("input"), c.param(CurvePointsParam.INSTANCE.name())),
+                List.of(ParamSpec.CurvePoints.INSTANCE),
+                c -> NoiseFunctions.curveRemapWithPoints(c.pin("input"), c.param(ParamSpec.CurvePoints.INSTANCE.paramName())),
                 NoiseFunctions.CurveRemap.class,
-                f -> FunctionDecompose.of().pin("input", f.input()).param(CurvePointsParam.INSTANCE.name(), f.points())
+                f -> FunctionDecompose.of().pin("input", f.input()).param(ParamSpec.CurvePoints.INSTANCE.paramName(), f.points())
             ));
             registerFunction(NoiseFunctionTypes.SELECT, NodeSpec.of("Select", NodeSpec.Category.REMAP,
                 List.of("selector", "above", "below"),
@@ -294,12 +294,12 @@ public final class NodeSpecs {
             ParameterDescriptor<T> paramDescriptor = provider.parameterDescriptor();
             List<ParamSpec<?>> params = new ArrayList<>();
             params.add(ParamSpec.uniqueString("id", id));
-            params.add(SamplerKeyParam.INSTANCE);
+            params.add(ParamSpec.SamplerKey.INSTANCE);
             params.addAll(paramDescriptor.specs());
             axisScales(params);
             return NodeSpec.of(title, NodeSpec.Category.NOISE, List.of(), params,
                 c -> NoiseFunctions.createCombiner(
-                    c.param("id"), key, c.param(SamplerKeyParam.INSTANCE.name()), paramDescriptor.create(c),
+                    c.param("id"), key, c.param(ParamSpec.SamplerKey.INSTANCE.paramName()), paramDescriptor.create(c),
                     c.param("scale_x"), c.param("scale_y"), c.param("scale_z")
                 ),
                 (Class<NoiseFunctions.Combiner<?>>)(Class<?>)NoiseFunctions.Combiner.class,
@@ -309,7 +309,7 @@ public final class NodeSpecs {
                     T parameters = (T)entry.parameters();
                     return paramDescriptor.decompose(parameters)
                         .param("id", entry.id().toString())
-                        .param(SamplerKeyParam.INSTANCE.name(), entry.samplerKey())
+                        .param(ParamSpec.SamplerKey.INSTANCE.paramName(), entry.samplerKey())
                         .param("scale_x", f.xScale())
                         .param("scale_y", f.yScale())
                         .param("scale_z", f.zScale());

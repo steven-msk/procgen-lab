@@ -57,7 +57,7 @@ public interface NodeSpec {
         List<String> inputsImmutable = ImmutableList.copyOf(inputs);
         List<ParamSpec<?>> paramsImmutable = ImmutableList.copyOf(params);
         Set<String> pinNames = Set.copyOf(inputsImmutable);
-        Set<String> paramNames = paramsImmutable.stream().map(ParamSpec::name).collect(Collectors.toSet());
+        Set<String> paramNames = paramsImmutable.stream().map(ParamSpec::paramName).collect(Collectors.toSet());
         return new NodeSpec() {
             @Override
             public @Nullable FunctionDecompose decompose(NoiseFunction function) {

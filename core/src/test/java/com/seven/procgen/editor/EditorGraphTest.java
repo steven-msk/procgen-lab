@@ -1,5 +1,7 @@
 package com.seven.procgen.editor;
 
+import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
+import com.seven.procgen.engine.noise.combiner.NoiseCombinerProvider;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
 import com.seven.procgen.engine.noise.function.NoiseFunctionTypes;
 import com.seven.procgen.engine.noise.function.NoiseFunctions;
@@ -88,6 +90,20 @@ public class EditorGraphTest {
             var sampler = (NoiseFunctions.Sampler<?>)g.compile().root();
             Object expected = Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value().defaultParameters();
             assertEquals(expected, sampler.samplerEntry().parameters(), id.toString());
+        }
+    }
+
+    @Test
+    void combinerSpecDefaultsMatchProviderDefaults() {
+        for (RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> key : Registry.NOISE_COMBINER_PROVIDER.getKeys()) {
+            Identifier id = key.value();
+            EditorGraph g = new EditorGraph();
+            EditorNode node = g.add(getSpec(NodeSpecs.getCombinerNodeKey(key)), 0, 0);
+            g.connect(node.id, g.outputId, "value");
+
+            var combiner = (NoiseFunctions.Combiner<?>)g.compile().root();
+            Object expected = Registry.NOISE_COMBINER_PROVIDER.getOrThrow(key).value().defaultParameters();
+            assertEquals(expected, combiner.combinerEntry().parameters(), id.toString());
         }
     }
 

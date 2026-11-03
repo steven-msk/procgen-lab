@@ -19,7 +19,7 @@ public class EditorNode {
         this.spec = spec;
         this.x = x;
         this.y = y;
-        spec.params().forEach(p -> params.put(p.name(), p.defaultFor(id)));
+        spec.params().forEach(p -> params.put(p.paramName(), p.defaultFor(id)));
         spec.inputs().forEach(pin -> inputValues.put(pin, spec.inputDefault(pin)));
     }
 }
