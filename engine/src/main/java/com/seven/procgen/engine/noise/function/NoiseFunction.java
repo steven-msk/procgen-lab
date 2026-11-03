@@ -2,7 +2,6 @@ package com.seven.procgen.engine.noise.function;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.MapCodec;
-import com.mojang.serialization.codecs.RecordCodecBuilder;
 import com.seven.procgen.engine.noise.combiner.NoiseCombiner;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerProvider;
 import com.seven.procgen.engine.noise.sampler.NoiseSampler;
@@ -14,7 +13,6 @@ import org.jspecify.annotations.NonNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.UnaryOperator;
 
@@ -50,22 +48,6 @@ public interface NoiseFunction {
         return NoiseFunctions.clamp(this, min, max);
     }
 
-    static <T extends NoiseFunction> MapCodec<T> unaryCodec(Function<NoiseFunction, T> ctor, Function<T, NoiseFunction> in) {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            NoiseFunction.CODEC.fieldOf("input").forGetter(in)
-        ).apply(i, ctor));
-    }
-
-    static <T extends NoiseFunction> MapCodec<T> binaryCodec(
-        BiFunction<NoiseFunction, NoiseFunction, T> ctor,
-        Function<T, NoiseFunction> a, Function<T, NoiseFunction> b
-    ) {
-        return RecordCodecBuilder.mapCodec(i -> i.group(
-            NoiseFunction.CODEC.fieldOf("a").forGetter(a),
-            NoiseFunction.CODEC.fieldOf("b").forGetter(b)
-        ).apply(i, ctor));
-    }
-
     interface Visitor {
         NoiseFunction apply(NoiseFunction input);
 
@@ -95,13 +77,13 @@ public interface NoiseFunction {
         }
 
         public double get(double x, double y, double z) {
-            if (sampler == null) throw new IllegalStateException("Compute called with null sampler");
+            if (sampler == null) throw new IllegalStateException("Sampler not bound: " + id);
             return sampler.sample(x, y, z);
         }
 
         @SuppressWarnings("unchecked")
         public SamplerEntry<T> bind(RandomFork fork, RegistryEntryLookup.RegistryLookup registryLookup) {
-            NoiseSamplerProvider<T> provider = (NoiseSamplerProvider<T>)registryLookup.getOrThrow(Registries.NOISE_SAMPLER_PROVIDER).getOrThrow(providerKey).value();
+            NoiseSamplerProvider<T> provider = (NoiseSamplerProvider<T>)registryLookup.getOrThrow(Registries.NOISE_SAMPLER).getOrThrow(providerKey).value();
             RandomSource random = fork.fromHashOf(id.toString());
             return new SamplerEntry<>(id, providerKey, parameters, provider.getSampler(random.nextLong()));
         }
@@ -113,12 +95,15 @@ public interface NoiseFunction {
 
         @Override
         public int hashCode() {
-            return Objects.hash(id, providerKey);
+            return Objects.hash(id, providerKey, parameters);
         }
 
         @Override
         public boolean equals(Object obj) {
-            return obj instanceof SamplerEntry<?> e && id.equals(e.id) && providerKey.equals(e.providerKey);
+            return obj instanceof SamplerEntry<?> e
+                && id.equals(e.id)
+                && providerKey.equals(e.providerKey)
+                && parameters.equals(e.parameters);
         }
     }
 
@@ -127,14 +112,14 @@ public interface NoiseFunction {
         RegistryKey<NoiseSamplerProvider<?>> samplerKey, T parameters, @Nullable NoiseCombiner<T> combiner
     ) {
         public double combine(double x, double y, double z) {
-            if (combiner == null) throw new IllegalStateException("Combine called with null combiner");
+            if (combiner == null) throw new IllegalStateException("Combiner not bound: " + id);
             return combiner.compute(x, y, z);
         }
 
         @SuppressWarnings("unchecked")
         public CombinerEntry<T> bind(RandomFork fork, RegistryEntryLookup.RegistryLookup registryLookup) {
-            NoiseSamplerProvider<?> sampler = registryLookup.getOrThrow(Registries.NOISE_SAMPLER_PROVIDER).getOrThrow(samplerKey).value();
-            NoiseCombinerProvider<T> combiner = (NoiseCombinerProvider<T>)registryLookup.getOrThrow(Registries.NOISE_COMBINER_PROVIDER).getOrThrow(combinerKey).value();
+            NoiseSamplerProvider<?> sampler = registryLookup.getOrThrow(Registries.NOISE_SAMPLER).getOrThrow(samplerKey).value();
+            NoiseCombinerProvider<T> combiner = (NoiseCombinerProvider<T>)registryLookup.getOrThrow(Registries.NOISE_COMBINER).getOrThrow(combinerKey).value();
             RandomSource random = fork.fromHashOf(id.toString());
             return new CombinerEntry<>(id, combinerKey, samplerKey, parameters, combiner.getCombiner(random, sampler, parameters));
         }

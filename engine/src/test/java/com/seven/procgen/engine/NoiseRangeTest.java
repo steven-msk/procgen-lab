@@ -28,8 +28,8 @@ public class NoiseRangeTest {
         NoiseFunction perlin = createSampler("perlin", PERLIN);
         for (long seed : SEEDS) {
             double[] r = range(bind(perlin, seed), POINTS, 99L);
-            assertTrue(r[0] >= -1.0d - EPS, "seed " + seed + ": min was " + r[0]);
-            assertTrue(r[1] <= 1.0d + EPS, "seed " + seed + ": max was " + r[1]);
+            assertTrue(r[0] >= -1.0d - EPS, "seed " + seed + ": minInclusive was " + r[0]);
+            assertTrue(r[1] <= 1.0d + EPS, "seed " + seed + ": maxInclusive was " + r[1]);
             // not degenerate: it should actually use most of the range
             assertTrue(r[0] < -0.5d && r[1] > 0.5d, "seed " + seed + ": range was " + r[0] + ".." + r[1]);
         }
@@ -42,8 +42,8 @@ public class NoiseRangeTest {
             FBMCombiner.Parameters.of(-2, 1.0d, 1.0d, 1.0d, 1.0d));
         for (long seed : SEEDS) {
             double[] r = range(bind(fbm, seed), POINTS, 99L);
-            assertTrue(r[0] >= -1.0d - EPS, "seed " + seed + ": min was " + r[0]);
-            assertTrue(r[1] <= 1.0d + EPS, "seed " + seed + ": max was " + r[1]);
+            assertTrue(r[0] >= -1.0d - EPS, "seed " + seed + ": minInclusive was " + r[0]);
+            assertTrue(r[1] <= 1.0d + EPS, "seed " + seed + ": maxInclusive was " + r[1]);
         }
     }
 
@@ -61,9 +61,9 @@ public class NoiseRangeTest {
         NoiseFunction ridged = createCombiner("ridged", RIDGED_MULTIFRACTAL, PERLIN, parameters);
         for (long seed : SEEDS) {
             double[] r = range(bind(ridged, seed), POINTS, 99L);
-            assertTrue(r[0] >= -EPS, "seed " + seed + ": min was " + r[0]);
-            assertTrue(r[1] <= 1.0d + EPS, "seed " + seed + ": max was " + r[1]);
-            assertTrue(r[1] > 0.3d, "seed " + seed + ": max was only " + r[1]);
+            assertTrue(r[0] >= -EPS, "seed " + seed + ": minInclusive was " + r[0]);
+            assertTrue(r[1] <= 1.0d + EPS, "seed " + seed + ": maxInclusive was " + r[1]);
+            assertTrue(r[1] > 0.3d, "seed " + seed + ": maxInclusive was only " + r[1]);
         }
     }
 }

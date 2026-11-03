@@ -49,7 +49,7 @@ public final class JavaRandomSource implements RandomSource {
     @Override
     public int nextInt(int minInclusive, int maxExclusive) {
         // Unbiased, doesn't lose precision on large ranges like the double-based default.
-        // Throws IllegalArgumentException if min >= max.
+        // Throws IllegalArgumentException if minInclusive >= maxInclusive.
         return random.nextInt(minInclusive, maxExclusive);
     }
 

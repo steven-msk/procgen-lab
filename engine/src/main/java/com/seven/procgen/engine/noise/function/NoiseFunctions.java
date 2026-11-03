@@ -29,7 +29,7 @@ public final class NoiseFunctions {
     }
 
     public static NoiseFunction createSampler(String id, RegistryKey<NoiseSamplerProvider<?>> key, double xScale, double yScale, double zScale) {
-        return withDefaults(id, key, Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value(), xScale, yScale, zScale);
+        return withDefaults(id, key, Registry.NOISE_SAMPLER.getOrThrow(key).value(), xScale, yScale, zScale);
     }
 
     private static <T> NoiseFunction withDefaults(String id, RegistryKey<NoiseSamplerProvider<?>> key, NoiseSamplerProvider<T> provider, double sx, double sy, double sz) {
@@ -178,8 +178,8 @@ public final class NoiseFunctions {
         return new Terrace(input, levels, smoothness);
     }
 
-    public static NoiseFunction curveRemap(NoiseFunction input, List<CurveRemap.Point> points) {
-        return new CurveRemap(input, points);
+    public static NoiseFunction curveRemapWithPoints(NoiseFunction input, CurveRemap.PointList pointList) {
+        return new CurveRemap(input, pointList);
     }
 
     public static NoiseFunction curveRemap(NoiseFunction input, UnaryOperator<CurveRemap.Builder> builder) {
@@ -194,7 +194,7 @@ public final class NoiseFunctions {
         return select(selector, threshold, 0.0d, above, below);
     }
 
-    public record Sampler<T>(NoiseFunction.SamplerEntry<T> samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
+    public record Sampler<T>(NoiseFunction.@NonNull SamplerEntry<T> samplerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
         public static final MapCodec<Sampler<?>> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NoiseSamplerProvider.KEY_CODEC.<SamplerEntry<?>>dispatchMap("sampler", SamplerEntry::providerKey, Sampler::entryCodec).forGetter(Sampler::samplerEntry),
             Codec.DOUBLE.fieldOf("scale_x").forGetter(Sampler::xScale),
@@ -204,7 +204,7 @@ public final class NoiseFunctions {
 
         @SuppressWarnings("unchecked")
         private static <T> MapCodec<SamplerEntry<T>> entryCodec(RegistryKey<NoiseSamplerProvider<?>> key) {
-            NoiseSamplerProvider<T> provider = (NoiseSamplerProvider<T>)Registry.NOISE_SAMPLER_PROVIDER.getOrThrow(key).value();
+            NoiseSamplerProvider<T> provider = (NoiseSamplerProvider<T>)Registry.NOISE_SAMPLER.getOrThrow(key).value();
             return RecordCodecBuilder.mapCodec(i -> i.group(
                 Identifier.CODEC.fieldOf("id").forGetter(SamplerEntry::id),
                 provider.parametersCodec().optionalFieldOf("parameters", provider.defaultParameters()).forGetter(SamplerEntry::parameters)
@@ -230,14 +230,9 @@ public final class NoiseFunctions {
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
         }
-
-        @Override
-        public @NonNull String toString() {
-            return "Sampler[\"" + samplerEntry + "\", xScale=" + xScale + ", yScale=" + yScale + ", zScale=" + zScale + "]";
-        }
     }
 
-    public record Combiner<T extends NoiseCombiner.Parameters>(NoiseFunction.CombinerEntry<T> combinerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
+    public record Combiner<T extends NoiseCombiner.Parameters>(NoiseFunction.@NonNull CombinerEntry<T> combinerEntry, double xScale, double yScale, double zScale) implements NoiseFunction {
         public static final MapCodec<Combiner<? extends NoiseCombiner.Parameters>> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NoiseCombinerProvider.KEY_CODEC.<CombinerEntry<?>>dispatchMap("combiner", CombinerEntry::combinerKey, Combiner::entryCodec)
                 .fieldOf("combiner").forGetter(Combiner::combinerEntry),
@@ -248,7 +243,7 @@ public final class NoiseFunctions {
 
         @SuppressWarnings("unchecked")
         private static <T extends NoiseCombiner.Parameters> MapCodec<CombinerEntry<T>> entryCodec(RegistryKey<NoiseCombinerProvider<? extends NoiseCombiner.Parameters>> provider) {
-            Codec<T> parametersCodec = (Codec<T>)Registry.NOISE_COMBINER_PROVIDER.getOrThrow(provider).value().parametersCodec();
+            Codec<T> parametersCodec = (Codec<T>)Registry.NOISE_COMBINER.getOrThrow(provider).value().parametersCodec();
             return RecordCodecBuilder.mapCodec(i -> i.group(
                 Identifier.CODEC.fieldOf("id").forGetter(CombinerEntry::id),
                 NoiseSamplerProvider.KEY_CODEC.fieldOf("sampler").forGetter(CombinerEntry::samplerKey),
@@ -275,11 +270,6 @@ public final class NoiseFunctions {
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
         }
-
-        @Override
-        public @NonNull String toString() {
-            return "Combiner[\"" + combinerEntry + "\", xScale=" + xScale + ", yScale=" + yScale + ", zScale=" + zScale + "]";
-        }
     }
 
     public record Constant(double value) implements NoiseFunction {
@@ -305,11 +295,6 @@ public final class NoiseFunctions {
         @Override
         public MapCodec<? extends NoiseFunction> codec() {
             return CODEC;
-        }
-
-        @Override
-        public @NonNull String toString() {
-            return "Constant[" + value + "]";
         }
     }
 
@@ -384,12 +369,12 @@ public final class NoiseFunctions {
     public record Clamp(NoiseFunction input, double min, double max) implements NoiseFunction {
         public static final MapCodec<Clamp> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NoiseFunction.CODEC.fieldOf("input").forGetter(Clamp::input),
-            Codec.DOUBLE.fieldOf("min").forGetter(Clamp::min),
-            Codec.DOUBLE.fieldOf("max").forGetter(Clamp::max)
+            Codec.DOUBLE.fieldOf("minInclusive").forGetter(Clamp::min),
+            Codec.DOUBLE.fieldOf("maxInclusive").forGetter(Clamp::max)
         ).apply(i, Clamp::new));
 
         public Clamp {
-            if (min > max) throw new IllegalArgumentException("min > max: " + min + " > " + max);
+            if (min > max) throw new IllegalArgumentException("minInclusive > maxInclusive: " + min + " > " + max);
         }
 
         @Override
@@ -793,39 +778,12 @@ public final class NoiseFunctions {
     /// Spline remap through user-placed points (in -> out), cubic Hermite with Fritsch-Butland slopes,
     /// so the curve is smooth and never overshoots between points (a monotone input gives a monotone output).
     /// Values outside the first/last `in` are held at the end points' `out`.
-    /// Slopes are computed per call from the two neighboring segments: no hidden arrays, so the record
-    /// keeps structural equals/hashCode for node dedup.
-    public record CurveRemap(NoiseFunction input, List<Point> points) implements NoiseFunction {
+    /// Slopes are computed per call from the two neighboring segments.
+    public record CurveRemap(NoiseFunction input, PointList points) implements NoiseFunction {
         public static final MapCodec<CurveRemap> CODEC = RecordCodecBuilder.mapCodec(i -> i.group(
             NoiseFunction.CODEC.fieldOf("input").forGetter(CurveRemap::input),
-            Point.CODEC.listOf().validate(list -> {
-                String problem = findProblem(list);
-                return problem == null ? DataResult.success(list) : DataResult.error(() -> problem);
-            }).fieldOf("points").forGetter(CurveRemap::points)
+            PointList.CODEC.fieldOf("points").forGetter(CurveRemap::points)
         ).apply(i, CurveRemap::new));
-
-        public record Point(double in, double out) {
-            public static final Codec<Point> CODEC = RecordCodecBuilder.create(i -> i.group(
-                Codec.DOUBLE.fieldOf("in").forGetter(Point::in),
-                Codec.DOUBLE.fieldOf("out").forGetter(Point::out)
-            ).apply(i, Point::new));
-        }
-
-        public CurveRemap {
-            String problem = findProblem(points);
-            if (problem != null) throw new IllegalArgumentException(problem);
-            points = List.copyOf(points);
-        }
-
-        private static @Nullable String findProblem(List<Point> points) {
-            if (points.size() < 2) return "curve needs at least 2 points";
-            for (int k = 1; k < points.size(); k++) {
-                if (!(points.get(k).in() > points.get(k - 1).in())) {
-                    return "curve points need strictly increasing 'in' values";
-                }
-            }
-            return null;
-        }
 
         private double delta(int k) {
             Point a = points.get(k);
@@ -892,6 +850,57 @@ public final class NoiseFunctions {
             return n0 == input ? this : new CurveRemap(n0, points);
         }
 
+        public record PointList(List<Point> points) {
+            public static final Codec<PointList> CODEC = Point.CODEC.listOf().validate(list -> {
+                String problem = findProblem(list);
+                return problem == null ? DataResult.success(list) : DataResult.error(() -> problem);
+            }).xmap(PointList::new, PointList::points);
+
+            public PointList {
+                String problem = findProblem(points);
+                if (problem != null) throw new IllegalArgumentException(problem);
+                points = ImmutableList.copyOf(points);
+            }
+
+            private static @Nullable String findProblem(List<Point> points) {
+                if (points.size() < 2) return "curve needs at least 2 points";
+                for (int k = 1; k < points.size(); k++) {
+                    if (!(points.get(k).in() > points.get(k - 1).in())) {
+                        return "curve points need strictly increasing 'in' values";
+                    }
+                }
+                return null;
+            }
+
+            public Point get(int k) {
+                return points.get(k);
+            }
+
+            public Point getFirst() {
+                return points.getFirst();
+            }
+
+            public Point getLast() {
+                return points.getLast();
+            }
+
+            public int size() {
+                return points.size();
+            }
+
+        }
+
+        public record Point(double in, double out) {
+            public static final Codec<Point> CODEC = RecordCodecBuilder.create(i -> i.group(
+                Codec.DOUBLE.fieldOf("in").forGetter(Point::in),
+                Codec.DOUBLE.fieldOf("out").forGetter(Point::out)
+            ).apply(i, Point::new));
+
+            public static Point of(double in, double out) {
+                return new Point(in, out);
+            }
+        }
+
         public static final class Builder {
             private final ImmutableList.Builder<CurveRemap.Point> builder = new ImmutableList.Builder<>();
             private final NoiseFunction input;
@@ -910,7 +919,7 @@ public final class NoiseFunctions {
             }
 
             public CurveRemap build() {
-                return new CurveRemap(input, builder.build());
+                return new CurveRemap(input, new PointList(builder.build()));
             }
         }
     }

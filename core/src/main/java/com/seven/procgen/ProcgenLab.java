@@ -24,6 +24,8 @@ import com.seven.procgen.render.NoiseImageRenderer;
 import com.seven.procgen.render.NoiseTreeImage;
 import org.slf4j.Logger;
 
+import java.util.Random;
+
 import static com.seven.procgen.engine.noise.function.NoiseFunctions.*;
 
 /**
@@ -90,7 +92,7 @@ public class ProcgenLab extends ApplicationAdapter {
         );
 
         // Island falloff (ocean outside the radius) and a slight north-south tilt
-        NoiseFunction island = radialGradient(cx, cy, radius * 0.45d, radius, 0.25d, -1.0d);
+        NoiseFunction island = radialGradient(256, 256, radius * 0.2d, radius * 0.8d, 0.25d, -1.0d);
         NoiseFunction tilt = gradient(Axis.Y, cy - radius, cy + radius, 0.08d, -0.08d);
 
         return clamp(shaped.mul(0.75d).add(island).add(tilt), -1.0d, 1.0d);
@@ -102,7 +104,8 @@ public class ProcgenLab extends ApplicationAdapter {
 
         this.batch = new SpriteBatch();
         int size = 512;
-        long seed = 0L;
+        Random random = new Random();
+        long seed = random.nextLong();
 
         NoiseFunction noise = tree().mapAll(new NoiseState(seed, Registry.getDefaultLookup()));
         this.field = SampleField.sampleFunction(noise, size, size, 0.0d, 0.0d, 1.0d);

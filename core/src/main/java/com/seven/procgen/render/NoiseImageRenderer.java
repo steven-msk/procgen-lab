@@ -44,7 +44,7 @@ public class NoiseImageRenderer implements Disposable {
         return this.texture;
     }
 
-    /// Stretches the field's own min/max over the ramp. Good for seeing shape, but hides absolute range problems.
+    /// Stretches the field's own minInclusive/maxInclusive over the ramp. Good for seeing shape, but hides absolute range problems.
     public Texture updateAutoRange(SampleField field, ColorRamp ramp) {
         return update(field, ramp, field.min(), field.max(), false);
     }

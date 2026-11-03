@@ -87,7 +87,7 @@ public final class TestNoise {
         return diff;
     }
 
-    /// {min, max} over random points in [-2000, 2000]^2.
+    /// {minInclusive, maxInclusive} over random points in [-2000, 2000]^2.
     public static double[] range(NoiseFunction f, int count, long pointSeed) {
         Random points = new Random(pointSeed);
         double min = Double.POSITIVE_INFINITY;

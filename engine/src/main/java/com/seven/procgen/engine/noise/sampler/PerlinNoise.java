@@ -25,7 +25,7 @@ public final class PerlinNoise implements NoiseSampler {
         int yi = (int)(y0 & 255);
         int zi = (int)(z0 & 255);
 
-        // Hash the 8 cube corners (max index is 511, so the doubled table never needs wrapping)
+        // Hash the 8 cube corners (maxInclusive index is 511, so the doubled table never needs wrapping)
         int a = perm[xi] + yi;
         int b = perm[xi + 1] + yi;
         int aa = perm[a] + zi;

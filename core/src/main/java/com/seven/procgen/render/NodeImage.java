@@ -36,7 +36,7 @@ public final class NodeImage implements Disposable {
         if (stats == null) {
             stats = SampleField.Stats.of(field);
             slice = row(field, s.size() / 2);
-            statsLine = String.format("min %.3f max %.3f mean %.3f std %.3f%s",
+            statsLine = String.format("minInclusive %.3f maxInclusive %.3f mean %.3f std %.3f%s",
                 stats.min(), stats.max(), stats.mean(), stats.stdDeviation(),
                 stats.nonFinite() > 0 ? " NON-FINITE: " + stats.nonFinite() : ""
             );

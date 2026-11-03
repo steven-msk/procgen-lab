@@ -2,22 +2,21 @@ package com.seven.procgen.engine.noise.sampler;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import com.seven.procgen.engine.noise.graph.FunctionDecompose;
+import com.seven.procgen.engine.noise.graph.ParamSpec;
+import com.seven.procgen.engine.noise.graph.ParameterDescriptor;
 import com.seven.procgen.engine.util.math.NoiseMath;
 import com.seven.procgen.engine.util.serialization.Codecs;
+
+import java.util.List;
 
 /// Worley / cellular noise: one jittered feature point per unit cell, output derived from the nearest
 /// feature points. 3D, searches the 27 surrounding cells (exact for F1, near-exact for F2 at jitter <= 1).
 /// Output is mapped into [-1, 1].
 /// Distance outputs use approximate normalization constants and are clamped
 public final class WorleyNoise implements NoiseSampler {
-    public enum Metric {EUCLIDEAN, MANHATTAN, CHEBYSHEV}
-
-    /// F1 = distance to nearest point, F2 = to second nearest, CELL = flat random value per cell
-    public enum Output {F1, F2, F2_MINUS_F1, CELL}
-
     private static final double INV_21_BITS = 1.0d / 0x200000;
     private static final long CELL_SALT = 0x2545F4914F6CDD1DL;
-
     private final long seed;
     private final double jitter;
     private final Metric metric;
@@ -101,6 +100,11 @@ public final class WorleyNoise implements NoiseSampler {
         return (t < 0.0d ? 0.0d : Math.min(t, 1.0d)) * 2.0d - 1.0d;
     }
 
+    public enum Metric {EUCLIDEAN, MANHATTAN, CHEBYSHEV}
+
+    /// F1 = distance to nearest point, F2 = to second nearest, CELL = flat random value per cell
+    public enum Output {F1, F2, F2_MINUS_F1, CELL}
+
     public record Parameters(double jitter, Metric metric, Output output) {
         public static final Parameters DEFAULT = new Parameters(1.0d, Metric.EUCLIDEAN, Output.F1);
         public static final Codec<Parameters> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -108,5 +112,19 @@ public final class WorleyNoise implements NoiseSampler {
             Codecs.enumOf(Metric.class).optionalFieldOf("metric", Metric.EUCLIDEAN).forGetter(Parameters::metric),
             Codecs.enumOf(Output.class).optionalFieldOf("output", Output.F1).forGetter(Parameters::output)
         ).apply(i, Parameters::new));
+        public static final ParameterDescriptor<Parameters> DESCRIPTOR = ParameterDescriptor.of(
+            List.of(
+                ParamSpec.rangedDouble("jitter", 1.0d, 0.0d, 1.0d),
+                ParamSpec.enumValue("metric", Metric.EUCLIDEAN),
+                ParamSpec.enumValue("output", Output.F1)
+            ),
+            c -> new Parameters(
+                c.param("jitter"), c.param("metric"), c.param("output")
+            ),
+            p -> FunctionDecompose.of()
+                .param("jitter", p.jitter)
+                .param("metric", p.metric)
+                .param("output", p.output)
+        );
     }
 }
