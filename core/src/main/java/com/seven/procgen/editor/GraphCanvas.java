@@ -299,19 +299,27 @@ final class GraphCanvas implements Disposable {
 
     private void drawAddPopup() {
         if (!ImGui.beginPopup(ADD_POPUP)) return;
-        if (ImGui.isWindowAppearing()) ImGui.setKeyboardFocusHere();
+        boolean appearing = ImGui.isWindowAppearing();
+        if (appearing) ImGui.setKeyboardFocusHere();
         ImGui.inputText("##filter", filter);
         String needle = filter.get().toLowerCase(Locale.ROOT);
-        NodeSpec.Category last = null;
-        for (NodeSpec spec : menuSpecs) {
-            if (!needle.isEmpty() && !spec.title().toLowerCase(Locale.ROOT).contains(needle)) continue;
-            if (spec.category() != last) {
-                last = spec.category();
-                ImGui.textDisabled(last.label());
-            }
-            if (ImGui.selectable(spec.title())) {
-                state.addNode(spec, popupX, popupY);
-                ImGui.closeCurrentPopup();
+        boolean searching = !needle.isEmpty();
+        for (NodeSpec.Category category : NodeSpec.Category.values()) {
+            if (category == NodeSpec.Category.OUTPUT) continue;
+            List<NodeSpec> matches = menuSpecs.stream()
+                .filter(s -> s.category() == category && (!searching || s.title().toLowerCase(Locale.ROOT).contains(needle)))
+                .toList();
+            if (matches.isEmpty()) continue;
+            if (searching) ImGui.setNextItemOpen(true); // show every match
+            else if (appearing) ImGui.setNextItemOpen(false); // start closed each time the menu opens
+            if (ImGui.treeNode(category.label())) {
+                for (NodeSpec spec : matches) {
+                    if (ImGui.selectable(spec.title())) {
+                        state.addNode(spec, popupX, popupY);
+                        ImGui.closeCurrentPopup();
+                    }
+                }
+                ImGui.treePop();
             }
         }
         ImGui.endPopup();
