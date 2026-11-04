@@ -171,7 +171,7 @@ public final class NodeSpecs {
             registerFunction(NoiseFunctionTypes.GRADIENT, NodeSpec.of("Gradient", NodeSpec.Category.REMAP,
                 List.of(),
                 List.of(
-                    ParamSpec.enumValue("axis", Axis.Y),
+                    ParamSpec.enumValue("axis", Axis.Y, Axis.values()),
                     ParamSpec.unboundedDouble("from", -100.0d),
                     ParamSpec.unboundedDouble("to", 100.0d),
                     ParamSpec.unboundedDouble("from_value", -1.0d),

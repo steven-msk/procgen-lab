@@ -10,7 +10,7 @@ import org.jspecify.annotations.Nullable;
 
 public final class NodeImage implements Disposable {
     private static final int HISTOGRAM_BINS = 128;
-    private final NoiseFunction node;
+    private NoiseFunction node;
     private final NoiseImageRenderer renderer = new NoiseImageRenderer();
     private @Nullable SampleField field;
     private SampleField.@Nullable Stats stats;
@@ -29,7 +29,7 @@ public final class NodeImage implements Disposable {
         this.field = sampled;
     }
 
-    void update(NoiseTreeImage.SamplerState s, Config config, int viewVersion) {
+    public void update(NoiseTreeImage.SamplerState s, Config config, int viewVersion) {
         if (field == null) { // fallback: node wasn't reached on the grid (e.g. under a warp)
             field = SampleField.sampleFunction(node, s.size(), s.size(), s.originX(), s.originY(), s.step());
         }
@@ -55,8 +55,8 @@ public final class NodeImage implements Disposable {
         aboveLine = histogram.above() > 0f ? String.format("%.1f above range", histogram.above() * 100f) : null;
     }
 
-    void draw(float imageSize) {
-        ImGui.image(renderer.texture().getTextureObjectHandle(), imageSize, imageSize);
+    public void draw(float imageSize) {
+        drawImage(imageSize);
         ImGui.sameLine();
         ImGui.beginGroup();
         float[] bars = histogram.fractions();
@@ -69,6 +69,10 @@ public final class NodeImage implements Disposable {
         ImGui.endGroup();
     }
 
+    public void drawImage(float size) {
+        ImGui.image(renderer.texture().getTextureObjectHandle(), size, size);
+    }
+
     private static float[] row(SampleField field, int y) {
         float[] out = new float[field.width()];
         for (int x = 0; x < out.length; x++) {
@@ -76,6 +80,13 @@ public final class NodeImage implements Disposable {
             out[x] = Double.isFinite(v) ? (float)v : 0.0f;
         }
         return out;
+    }
+
+    public void reset(NoiseFunction node, @Nullable SampleField sampled) {
+        this.node = node;
+        this.field = sampled;
+        this.stats = null;
+        this.appliedVersion = -1;
     }
 
     @Override

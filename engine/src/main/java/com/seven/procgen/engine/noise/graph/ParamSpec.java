@@ -37,8 +37,8 @@ public interface ParamSpec<T> {
         return new IntSpec(name, defaultValue, Integer.MIN_VALUE, Integer.MAX_VALUE);
     }
 
-    static <E extends Enum<E>> ParamSpec<E> enumValue(String name, E defaultValue) {
-        return new EnumSpec<>(name, defaultValue);
+    static <E extends Enum<E>> ParamSpec<E> enumValue(String name, E defaultValue, E[] values) {
+        return new EnumSpec<>(name, defaultValue, values);
     }
 
     static ParamSpec<String> string(String name, String defaultValue) {
@@ -71,7 +71,7 @@ public interface ParamSpec<T> {
         }
     }
 
-    record EnumSpec<E extends Enum<E>>(String paramName, E defaultValue) implements ParamSpec<E> {
+    record EnumSpec<E extends Enum<E>>(String paramName, E defaultValue, E[] values) implements ParamSpec<E> {
     }
 
     record Simple<T>(String paramName, T defaultValue) implements ParamSpec<T> {
