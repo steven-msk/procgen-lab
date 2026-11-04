@@ -31,6 +31,8 @@ final class GraphCanvas implements Disposable {
     private static final float PREVIEW_SIZE = 190.0f;
     private static final float OUTPUT_SIZE = 400.0f;
     private static final float OUTPUT_MARGIN = 12.0f;
+    private static final float VALUE_WIDTH = 70.0f; // inline value of an unlinked input pin
+    private static final float ITEM_SPACING = 8.0f; // ImGui's default horizontal item spacing
     private static final String ADD_POPUP = "graph-add-node";
     private static final String NODE_POPUP = "graph-node-menu";
     private static final String CHOICE_POPUP = "graph-param-choice";
@@ -114,21 +116,29 @@ final class GraphCanvas implements Disposable {
         ImGui.dummy(NODE_WIDTH, 2.0f); // fixes the node's minimum width
 
         List<String> pins = spec.inputs();
-        for (int i = 0; i < pins.size(); i++) {
-            String pin = pins.get(i);
-            NodeEditor.beginPin(PinIds.input(node.id, i), NodeEditorPinKind.Input);
-            NodeEditor.pinPivotAlignment(0.0f, 0.5f); // links attach to the node's left edge
-            NodeEditor.pinPivotSize(0.0f, 0.0f);
-            ImGui.text("-> " + pin);
-            NodeEditor.endPin();
-            if (!node.inputs.containsKey(pin)) { // unlinked: edit the constant the pin falls back to
-                ImGui.sameLine();
-                float[] v = {node.inputValues.get(pin).floatValue()};
-                ImGui.setNextItemWidth(70.0f);
-                if (ImGui.dragFloat("##default_" + pin, v, 0.01f)) {
-                    state.setInputValue(node.id, pin, v[0]);
+        int rows = Math.max(pins.size(), isOutput ? 0 : 1); // a node without inputs still gets one row for its out pin
+        for (int i = 0; i < rows; i++) {
+            float used = 0.0f; // width taken on this row by the input pin
+            if (i < pins.size()) {
+                String pin = pins.get(i);
+                String label = "-> " + pin;
+                NodeEditor.beginPin(PinIds.input(node.id, i), NodeEditorPinKind.Input);
+                NodeEditor.pinPivotAlignment(0.0f, 0.5f); // links attach to the node's left edge
+                NodeEditor.pinPivotSize(0.0f, 0.0f);
+                ImGui.text(label);
+                NodeEditor.endPin();
+                used = ImGui.calcTextSize(label).x;
+                if (!node.inputs.containsKey(pin)) { // unlinked: edit the constant the pin falls back to
+                    ImGui.sameLine();
+                    float[] v = {node.inputValues.get(pin).floatValue()};
+                    ImGui.setNextItemWidth(VALUE_WIDTH);
+                    if (ImGui.dragFloat("##default_" + pin, v, 0.01f)) {
+                        state.setInputValue(node.id, pin, v[0]);
+                    }
+                    used += ITEM_SPACING + VALUE_WIDTH;
                 }
             }
+            if (i == 0 && !isOutput) drawOutputPin(node.id, used, i < pins.size());
         }
 
         boolean hasExtended = false;
@@ -148,19 +158,21 @@ final class GraphCanvas implements Disposable {
             else ImGui.textDisabled("no preview");
         }
 
-        if (!isOutput) {
-            String label = "out ->";
-            ImGui.dummy(NODE_WIDTH - ImGui.calcTextSize(label).x, 0.0f);
-            ImGui.sameLine();
-            NodeEditor.beginPin(PinIds.output(node.id), NodeEditorPinKind.Output);
-            NodeEditor.pinPivotAlignment(1.0f, 0.5f); // links leave from the node's right edge
-            NodeEditor.pinPivotSize(0.0f, 0.0f);
-            ImGui.text(label);
-            NodeEditor.endPin();
-        }
-
         NodeEditor.endNode();
         ImGui.popID();
+    }
+
+    private void drawOutputPin(int nodeId, float used, boolean sharesRow) {
+        String label = "out ->";
+        float gap = NODE_WIDTH - used - ImGui.calcTextSize(label).x - (sharesRow ? 2.0f * ITEM_SPACING : 0.0f);
+        if (sharesRow) ImGui.sameLine();
+        ImGui.dummy(Math.max(0.0f, gap), 0.0f);
+        ImGui.sameLine();
+        NodeEditor.beginPin(PinIds.output(nodeId), NodeEditorPinKind.Output);
+        NodeEditor.pinPivotAlignment(1.0f, 0.5f); // links leave from the node's right edge
+        NodeEditor.pinPivotSize(0.0f, 0.0f);
+        ImGui.text(label);
+        NodeEditor.endPin();
     }
 
     private void drawLinks(EditorGraph graph) {
