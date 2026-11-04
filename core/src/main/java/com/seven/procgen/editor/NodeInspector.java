@@ -45,7 +45,7 @@ final class NodeInspector {
             ImGui.separator();
             ImGui.text("Parameters");
             for (ParamSpec<?> param : node.spec.params()) {
-                Object next = widgets.edit(param, node.params.get(param.paramName()));
+                Object next = widgets.edit(param, node.params.get(param.paramName()), node.id, false);
                 if (next != null) state.setParam(node.id, param.paramName(), next);
             }
         }

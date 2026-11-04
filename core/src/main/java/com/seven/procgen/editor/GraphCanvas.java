@@ -29,8 +29,11 @@ import java.util.Map;
 final class GraphCanvas implements Disposable {
     private static final float NODE_WIDTH = 190.0f;
     private static final float PREVIEW_SIZE = 190.0f;
+    private static final float OUTPUT_SIZE = 400.0f;
+    private static final float OUTPUT_MARGIN = 12.0f;
     private static final String ADD_POPUP = "graph-add-node";
     private static final String NODE_POPUP = "graph-node-menu";
+    private static final String CHOICE_POPUP = "graph-param-choice";
     private final EditorState state;
     private final ParamWidgets widgets;
     private final List<NodeSpec> menuSpecs;
@@ -43,6 +46,7 @@ final class GraphCanvas implements Disposable {
     private float popupX;
     private float popupY;
     private int menuNodeId = EditorState.NONE;
+    private ParamWidgets.@Nullable PendingChoice activeChoice;
 
     GraphCanvas(EditorState state, ParamWidgets widgets, Registry<NodeSpec> specs) {
         this.state = state;
@@ -77,15 +81,14 @@ final class GraphCanvas implements Disposable {
             handleContextMenus(graph);
 
             NodeEditor.end();
+            drawOutputPreview(graph);
         }
         ImGui.end();
     }
 
     private void drawNode(EditorGraph graph, EditorNode node) {
         long nodeId = PinIds.node(node.id);
-        if (state.markPlaced(node.id)) {
-            NodeEditor.setNodePosition(nodeId, node.x, node.y);
-        }
+        if (state.markPlaced(node.id)) NodeEditor.setNodePosition(nodeId, node.x, node.y);
 
         NodeSpec spec = node.spec;
         boolean isOutput = node.id == graph.outputId;
@@ -108,7 +111,7 @@ final class GraphCanvas implements Disposable {
         } else if (state.preview.isBlocked(node.id)) {
             ImGui.textDisabled("blocked upstream");
         }
-        ImGui.dummy(NODE_WIDTH, 2.0f); // fix the node's minimum width
+        ImGui.dummy(NODE_WIDTH, 2.0f); // fixes the node's minimum width
 
         List<String> pins = spec.inputs();
         for (int i = 0; i < pins.size(); i++) {
@@ -118,7 +121,7 @@ final class GraphCanvas implements Disposable {
             NodeEditor.pinPivotSize(0.0f, 0.0f);
             ImGui.text("-> " + pin);
             NodeEditor.endPin();
-            if (!node.inputs.containsKey(pin)) { // unlinked, edit the constant the pin falls back to
+            if (!node.inputs.containsKey(pin)) { // unlinked: edit the constant the pin falls back to
                 ImGui.sameLine();
                 float[] v = {node.inputValues.get(pin).floatValue()};
                 ImGui.setNextItemWidth(70.0f);
@@ -134,12 +137,12 @@ final class GraphCanvas implements Disposable {
                 hasExtended = true;
                 continue;
             }
-            Object next = widgets.edit(param, node.params.get(param.paramName()));
+            Object next = widgets.edit(param, node.params.get(param.paramName()), node.id, true);
             if (next != null) state.setParam(node.id, param.paramName(), next);
         }
         if (hasExtended) ImGui.textDisabled("more in inspector");
 
-        if (node.previewOpen) {
+        if (node.previewOpen && !isOutput) { // the Output node has its own large preview in the corner
             NodeImage image = state.preview.image(node.id);
             if (image != null) image.drawImage(PREVIEW_SIZE);
             else ImGui.textDisabled("no preview");
@@ -198,6 +201,27 @@ final class GraphCanvas implements Disposable {
         NodeEditor.endCreate();
     }
 
+    /// Always-visible preview of the graph's final value, in the bottom right corner of the Graph window.
+    /// A child window, so it stays on top of the canvas, moves with the window and gets the mouse where it overlaps.
+    private void drawOutputPreview(EditorGraph graph) {
+        ImVec2 window = ImGui.getWindowSize();
+        float width = OUTPUT_SIZE + 16.0f;
+        float height = OUTPUT_SIZE + 40.0f;
+        ImGui.setCursorPos(
+            Math.max(0.0f, window.x - width - OUTPUT_MARGIN),
+            Math.max(0.0f, window.y - height - OUTPUT_MARGIN)
+        );
+        if (ImGui.beginChild("##output-preview", width, height, true, ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse)) {
+            ImGui.textDisabled("Output");
+            NodeImage image = state.preview.image(graph.outputId);
+            if (image != null) image.drawImage(OUTPUT_SIZE);
+            else if (state.preview.isBlocked(graph.outputId)) ImGui.textDisabled("blocked upstream");
+            else ImGui.textDisabled("nothing connected");
+        }
+        ImGui.endChild();
+    }
+
+
     private void handleDelete(EditorGraph graph) {
         if (NodeEditor.beginDelete()) {
             while (NodeEditor.queryDeletedLink(idA, idB, idC)) {
@@ -250,8 +274,14 @@ final class GraphCanvas implements Disposable {
             menuNodeId = PinIds.nodeOf(contextNode);
             ImGui.openPopup(NODE_POPUP);
         }
+        ParamWidgets.PendingChoice requested = widgets.takePendingChoice(); // a choice button was clicked in a node this frame
+        if (requested != null) {
+            activeChoice = requested;
+            ImGui.openPopup(CHOICE_POPUP);
+        }
         drawAddPopup();
         drawNodePopup(graph);
+        drawChoicePopup();
         NodeEditor.resume();
     }
 
@@ -270,6 +300,22 @@ final class GraphCanvas implements Disposable {
             if (ImGui.selectable(spec.title())) {
                 state.addNode(spec, popupX, popupY);
                 ImGui.closeCurrentPopup();
+            }
+        }
+        ImGui.endPopup();
+    }
+
+    private void drawChoicePopup() {
+        if (!ImGui.beginPopup(CHOICE_POPUP)) return;
+        ParamWidgets.PendingChoice choice = activeChoice;
+        if (choice == null) {
+            ImGui.closeCurrentPopup();
+        } else {
+            for (ParamWidgets.Choice option : choice.choices()) {
+                if (ImGui.selectable(option.label(), option.value().equals(choice.current()))) {
+                    state.setParam(choice.nodeId(), choice.param(), option.value());
+                    ImGui.closeCurrentPopup();
+                }
             }
         }
         ImGui.endPopup();
