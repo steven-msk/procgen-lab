@@ -2,7 +2,7 @@ package com.seven.procgen.editor;
 
 import java.util.*;
 
-public final class GraphLayout {
+final class GraphLayout {
     private static final float COLUMN_WIDTH = 280.0f;
     private static final float ROW_HEIGHT = 240.0f;
 

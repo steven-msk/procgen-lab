@@ -5,16 +5,14 @@ import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.utils.ScreenUtils;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonElement;
-import com.mojang.serialization.JsonOps;
+import com.seven.procgen.editor.EditorGraph;
+import com.seven.procgen.editor.GraphEditor;
 import com.seven.procgen.engine.logging.LogUtil;
 import com.seven.procgen.engine.noise.combiner.NoiseCombinerType;
 import com.seven.procgen.engine.noise.combiner.RidgedMultifractalCombiner;
 import com.seven.procgen.engine.noise.data.NoiseState;
 import com.seven.procgen.engine.noise.data.SampleField;
 import com.seven.procgen.engine.noise.function.NoiseFunction;
-import com.seven.procgen.engine.noise.graph.NoiseGraph;
 import com.seven.procgen.engine.noise.sampler.NoiseSamplerType;
 import com.seven.procgen.engine.registry.Registry;
 import com.seven.procgen.engine.util.color.ColorRamp;
@@ -39,6 +37,7 @@ public class ProcgenLab extends ApplicationAdapter {
     private NoiseImageRenderer renderer;
     private SampleField field;
     private static final int NODE_IMAGE_SIZE = 128;
+    private GraphEditor graphEditor;
     private NoiseTreeImage treeImage;
     private ColorRamp ramp = ColorRamp.TERRAIN;
     private boolean autoRange = false;
@@ -107,14 +106,18 @@ public class ProcgenLab extends ApplicationAdapter {
         Random random = new Random();
         long seed = random.nextLong();
 
+        this.graphEditor = new GraphEditor(Registry.NODE_SPEC, Registry.NOISE_SAMPLER,
+            f -> f.mapAll(new NoiseState(seed, Registry.getDefaultLookup())),
+            new NoiseTreeImage.SamplerState(NODE_IMAGE_SIZE, 0.0d, 0.0d, (double)size / NODE_IMAGE_SIZE),
+            currentConfig()
+        );
+        graphEditor.setGraph(EditorGraph.importTree(tree(), Registry.getDefaultLookup()));
+
         NoiseFunction noise = tree().mapAll(new NoiseState(seed, Registry.getDefaultLookup()));
         this.field = SampleField.sampleFunction(noise, size, size, 0.0d, 0.0d, 1.0d);
         this.renderer = new NoiseImageRenderer();
         this.treeImage = new NoiseTreeImage(noise, new NoiseTreeImage.SamplerState(NODE_IMAGE_SIZE, 0.0d, 0.0d, (double)size / NODE_IMAGE_SIZE), currentConfig());
         refresh();
-
-        JsonElement json = NoiseGraph.TREE_CODEC.encodeStart(JsonOps.INSTANCE, noise).getOrThrow();
-        LOGGER.info(new GsonBuilder().setPrettyPrinting().create().toJson(json));
     }
 
     private NodeImage.Config currentConfig() {
@@ -158,6 +161,7 @@ public class ProcgenLab extends ApplicationAdapter {
         if (changed) {
             refresh();
             treeImage.setImageConfig(currentConfig());
+            graphEditor.setImageConfig(currentConfig());
         }
 
         ScreenUtils.clear(0.1f, 0.1f, 0.1f, 1f);
@@ -167,6 +171,7 @@ public class ProcgenLab extends ApplicationAdapter {
 
         imGuiContextHandle.start();
         treeImage.draw();
+        graphEditor.draw();
         imGuiContextHandle.end();
     }
 
@@ -176,6 +181,7 @@ public class ProcgenLab extends ApplicationAdapter {
         treeImage.dispose();
         renderer.dispose();
         this.batch.dispose();
+        graphEditor.dispose();
     }
 
     public static ProcgenLab getInstance() {

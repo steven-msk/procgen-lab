@@ -115,8 +115,8 @@ public final class WorleyNoise implements NoiseSampler {
         public static final ParameterDescriptor<Parameters> DESCRIPTOR = ParameterDescriptor.of(
             List.of(
                 ParamSpec.rangedDouble("jitter", 1.0d, 0.0d, 1.0d),
-                ParamSpec.enumValue("metric", Metric.EUCLIDEAN),
-                ParamSpec.enumValue("output", Output.F1)
+                ParamSpec.enumValue("metric", Metric.EUCLIDEAN, Metric.values()),
+                ParamSpec.enumValue("output", Output.F1, Output.values())
             ),
             c -> new Parameters(
                 c.param("jitter"), c.param("metric"), c.param("output")

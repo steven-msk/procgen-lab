@@ -5,7 +5,7 @@ import com.seven.procgen.engine.noise.graph.NodeSpec;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-public class EditorNode {
+final class EditorNode {
     final int id;
     final NodeSpec spec;
     float x, y;

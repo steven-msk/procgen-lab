@@ -31,16 +31,55 @@ public final class EditorGraph {
         return node;
     }
 
-    /// Links the output of `from` into pin `inputName` of `to`, replacing any existing link on that pin.
-    boolean connect(int from, int to, String inputName) {
+    /// Used to turn the drag preview red before the drop
+    ///
+    /// @return true if linking `from` into pin `inputName` of `to` is allowed.
+    boolean canConnect(int from, int to, String inputName) {
         EditorNode source = nodes.get(from);
         EditorNode target = nodes.get(to);
         if (source == null || target == null || from == outputId) return false;
         if (!target.spec.inputs().contains(inputName)) return false;
-        if (from == to || dependsOn(from, to)) return false; // would create a cycle
-        target.inputs.put(inputName, from);
+        // dependsOn(from, to): `from` already reads from `to`, so this would be a cycle
+        return from != to && !dependsOn(from, to);
+    }
+
+    /// Links the output of `from` into pin `inputName` of `to`, replacing any existing link on that pin.
+    boolean connect(int from, int to, String inputName) {
+        if (!canConnect(from, to, inputName)) return false;
+        nodes.get(to).inputs.put(inputName, from);
         version++;
         return true;
+    }
+
+    void disconnect(int to, String inputName) {
+        EditorNode target = nodes.get(to);
+        if (target != null && target.inputs.remove(inputName) != null) {
+            version++;
+        }
+    }
+
+    /// Removes a node and every link read from it.
+    /// The Out node can't be removed.
+    boolean remove(int id) {
+        if (id == outputId || nodes.remove(id) == null) return false;
+        nodes.values().forEach(n -> n.inputs.values().removeIf(source -> source == id));
+        version++;
+        return true;
+    }
+
+    /// Replaces a param value. The params are never edited in place (this includes arrays)
+    void setParam(int id, String name, Object value) {
+        EditorNode node = nodes.get(id);
+        if (node == null || !node.params.containsKey(name)) return;
+        node.params.put(name, value);
+        version++;
+    }
+
+    void setInputValue(int id, String pin, double value) {
+        EditorNode node = nodes.get(id);
+        if (node == null || !node.inputValues.containsKey(pin)) return;
+        node.inputValues.put(pin, value);
+        version++;
     }
 
     /// True if `node` is `ancestor` or reads from it, directly or through other nodes.
@@ -61,6 +100,8 @@ public final class EditorGraph {
         Map<Integer, String> errors = new LinkedHashMap<>();
         Set<Integer> failed = new HashSet<>();
         NoiseFunction root = build(outputId, built, errors, failed);
+        // dangling nodes get a function or an error too
+        for (int id : nodes.keySet()) build(id, built, errors, failed);
         return new Compiled(root, built, errors);
     }
 
