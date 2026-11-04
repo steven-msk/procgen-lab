@@ -41,19 +41,14 @@ final class NodeInspector {
         if (image != null) image.draw(IMAGE_SIZE);
         else if (error == null) ImGui.textDisabled("No preview.");
 
-        boolean header = false;
-        for (ParamSpec<?> param : node.spec.params()) {
-            if (widgets.isInline(param)) continue; // edited in the node itself
-            if (!header) {
-                ImGui.separator();
-                ImGui.text("Parameters");
-                header = true;
+        if (!node.spec.params().isEmpty()) {
+            ImGui.separator();
+            ImGui.text("Parameters");
+            for (ParamSpec<?> param : node.spec.params()) {
+                Object next = widgets.edit(param, node.params.get(param.paramName()));
+                if (next != null) state.setParam(node.id, param.paramName(), next);
             }
-            Object next = widgets.edit(param, node.params.get(param.paramName()));
-            if (next != null) state.setParam(node.id, param.paramName(), next);
         }
         ImGui.popID();
     }
-
-
 }

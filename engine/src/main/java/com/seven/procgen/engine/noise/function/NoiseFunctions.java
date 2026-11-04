@@ -785,53 +785,9 @@ public final class NoiseFunctions {
             PointList.CODEC.fieldOf("points").forGetter(CurveRemap::points)
         ).apply(i, CurveRemap::new));
 
-        private double delta(int k) {
-            Point a = points.get(k);
-            Point b = points.get(k + 1);
-            return (b.out() - a.out()) / (b.in() - a.in());
-        }
-
-        private double slope(int k) {
-            int size = points.size();
-            if (k == 0) return delta(0);
-            if (k == size - 1) return delta(size - 2);
-            double d0 = delta(k - 1);
-            double d1 = delta(k);
-            if (d0 * d1 <= 0.0d) return 0.0d; // local extremum or flat: keep it flat
-            double h0 = points.get(k).in() - points.get(k - 1).in();
-            double h1 = points.get(k + 1).in() - points.get(k).in();
-            double w1 = 2.0d * h1 + h0;
-            double w2 = h1 + 2.0d * h0;
-            return (w1 + w2) / (w1 / d0 + w2 / d1);
-        }
-
         @Override
         public double compute(Context context) {
-            double v = input.compute(context);
-            int size = points.size();
-            Point first = points.getFirst();
-            Point last = points.getLast();
-            if (v <= first.in()) return first.out();
-            if (v >= last.in()) return last.out();
-
-            int lo = 0;
-            int hi = size - 1;
-            while (hi - lo > 1) {
-                int mid = (lo + hi) >>> 1;
-                if (points.get(mid).in() <= v) lo = mid;
-                else hi = mid;
-            }
-
-            Point a = points.get(lo);
-            Point b = points.get(lo + 1);
-            double h = b.in() - a.in();
-            double t = (v - a.in()) / h;
-            double t2 = t * t;
-            double t3 = t2 * t;
-            return (2 * t3 - 3 * t2 + 1) * a.out()
-                + (t3 - 2 * t2 + t) * h * slope(lo)
-                + (-2 * t3 + 3 * t2) * b.out()
-                + (t3 - t2) * h * slope(lo + 1);
+            return points.evaluate(input.compute(context));
         }
 
         @Override
@@ -870,6 +826,55 @@ public final class NoiseFunctions {
                     }
                 }
                 return null;
+            }
+
+            /// Cubic Hermite through the points with Fritsch-Butland slopes.
+            /// Held at the end points' `out` outside the range.
+            public double evaluate(double v) {
+                int size = points.size();
+                Point first = points.getFirst();
+                Point last = points.getLast();
+                if (v <= first.in()) return first.out();
+                if (v >= last.in()) return last.out();
+
+                int lo = 0;
+                int hi = size - 1;
+                while (hi - lo > 1) {
+                    int mid = (lo + hi) >>> 1;
+                    if (points.get(mid).in() <= v) lo = mid;
+                    else hi = mid;
+                }
+
+                Point a = points.get(lo);
+                Point b = points.get(lo + 1);
+                double h = b.in() - a.in();
+                double t = (v - a.in()) / h;
+                double t2 = t * t;
+                double t3 = t2 * t;
+                return (2 * t3 - 3 * t2 + 1) * a.out()
+                    + (t3 - 2 * t2 + t) * h * slope(lo)
+                    + (-2 * t3 + 3 * t2) * b.out()
+                    + (t3 - t2) * h * slope(lo + 1);
+            }
+
+            private double delta(int k) {
+                Point a = points.get(k);
+                Point b = points.get(k + 1);
+                return (b.out() - a.out()) / (b.in() - a.in());
+            }
+
+            private double slope(int k) {
+                int size = points.size();
+                if (k == 0) return delta(0);
+                if (k == size - 1) return delta(size - 2);
+                double d0 = delta(k - 1);
+                double d1 = delta(k);
+                if (d0 * d1 <= 0.0d) return 0.0d; // local extremum or flat: keep it flat
+                double h0 = points.get(k).in() - points.get(k - 1).in();
+                double h1 = points.get(k + 1).in() - points.get(k).in();
+                double w1 = 2.0d * h1 + h0;
+                double w2 = h1 + 2.0d * h0;
+                return (w1 + w2) / (w1 / d0 + w2 / d1);
             }
 
             public Point get(int k) {
